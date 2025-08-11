@@ -17,6 +17,15 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.fourmen.meetingplatform.domain.auth.dto.request.SignUpRequest;
+import com.fourmen.meetingplatform.domain.user.entity.Role;
+import com.fourmen.meetingplatform.common.exception.CustomException;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.util.StringUtils;
+import com.fourmen.meetingplatform.domain.company.entity.Company;
+import com.fourmen.meetingplatform.domain.company.repository.CompanyRepository;
+import com.fourmen.meetingplatform.domain.auth.dto.response.SignUpResponse;
 
 import java.util.UUID;
 
@@ -27,6 +36,42 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManagerBuilder authenticationManagerBuilder;
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final CompanyRepository companyRepository;
+
+    @Transactional
+    public SignUpResponse signUp(SignUpRequest signUpRequest) {
+        if (userRepository.existsByEmail(signUpRequest.getEmail())) {
+            throw new CustomException("이미 가입된 이메일입니다.", HttpStatus.BAD_REQUEST);
+        }
+
+        Role role = Role.USER;
+        Long companyId = null;
+
+        String adminCode = signUpRequest.getAdminCode();
+        if (StringUtils.hasText(adminCode)) {
+            Company company = companyRepository.findByAdminCode(adminCode)
+                    .orElseThrow(() -> new CustomException("유효하지 않은 관리자 코드입니다.", HttpStatus.BAD_REQUEST));
+
+            role = Role.ADMIN;
+            companyId = company.getId();
+        }
+
+        String encodedPassword = passwordEncoder.encode(signUpRequest.getPassword());
+
+        User user = User.builder()
+                .email(signUpRequest.getEmail())
+                .password(encodedPassword)
+                .name(signUpRequest.getName())
+                .phone(signUpRequest.getPhone())
+                .role(role)
+                .companyId(companyId)
+                .build();
+
+        User savedUser = userRepository.save(user);
+
+        return SignUpResponse.from(savedUser);
+    }
 
     @Transactional
     public LoginResponse login(LoginRequest loginRequest, HttpServletResponse response) {
