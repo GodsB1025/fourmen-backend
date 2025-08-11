@@ -1,0 +1,116 @@
+package com.fourmen.meetingplatform.domain.auth.service;
+
+import com.fourmen.meetingplatform.config.jwt.JwtTokenProvider;
+import com.fourmen.meetingplatform.domain.auth.dto.request.LoginRequest;
+import com.fourmen.meetingplatform.domain.auth.dto.response.LoginResponse;
+import com.fourmen.meetingplatform.domain.user.entity.User;
+import com.fourmen.meetingplatform.domain.user.repository.UserRepository;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+public class AuthService {
+
+    private final JwtTokenProvider jwtTokenProvider;
+    private final AuthenticationManagerBuilder authenticationManagerBuilder;
+    private final UserRepository userRepository;
+
+    @Transactional
+    public LoginResponse login(LoginRequest loginRequest, HttpServletResponse response) {
+        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                loginRequest.getEmail(), loginRequest.getPassword());
+
+        Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        String csrfToken = UUID.randomUUID().toString();
+        String accessToken = jwtTokenProvider.createAccessToken(authentication, csrfToken);
+        String refreshToken = jwtTokenProvider.createRefreshToken(authentication);
+
+        User user = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+        user.updateRefreshToken(refreshToken);
+
+        addTokenToCookie(response, "accessToken", accessToken, 60 * 60, true);
+        addTokenToCookie(response, "refreshToken", refreshToken, 60 * 60 * 24 * 7, true);
+        addTokenToCookie(response, "XSRF-TOKEN", csrfToken, 60 * 60, false);
+
+        return LoginResponse.from(user);
+    }
+
+    @Transactional
+    public void refreshToken(HttpServletRequest request, HttpServletResponse response) {
+        String oldRefreshToken = null;
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("refreshToken".equals(cookie.getName())) {
+                    oldRefreshToken = cookie.getValue();
+                    break;
+                }
+            }
+        }
+
+        if (oldRefreshToken == null || !jwtTokenProvider.validateToken(oldRefreshToken)) {
+            throw new IllegalArgumentException("유효하지 않은 Refresh Token 입니다.");
+        }
+
+        User user = userRepository.findByRefreshToken(oldRefreshToken)
+                .orElseThrow(() -> new IllegalArgumentException("Refresh Token에 해당하는 사용자가 없습니다."));
+
+        Authentication authentication = jwtTokenProvider.getAuthentication(oldRefreshToken);
+        String newCsrfToken = UUID.randomUUID().toString();
+        String newAccessToken = jwtTokenProvider.createAccessToken(authentication, newCsrfToken);
+        String newRefreshToken = jwtTokenProvider.createRefreshToken(authentication);
+
+        user.updateRefreshToken(newRefreshToken);
+
+        addTokenToCookie(response, "accessToken", newAccessToken, 60 * 60, true);
+        addTokenToCookie(response, "refreshToken", newRefreshToken, 60 * 60 * 24 * 7, true);
+        addTokenToCookie(response, "XSRF-TOKEN", newCsrfToken, 60 * 60, false);
+    }
+
+    @Transactional
+    public void logout(HttpServletRequest request, HttpServletResponse response) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        userRepository.findByEmail(username).ifPresent(user -> user.updateRefreshToken(null));
+
+        expireCookie(response, "accessToken");
+        expireCookie(response, "refreshToken");
+        expireCookie(response, "XSRF-TOKEN");
+    }
+
+    private void addTokenToCookie(HttpServletResponse response, String name, String value, int maxAge,
+            boolean httpOnly) {
+        ResponseCookie cookie = ResponseCookie.from(name, value)
+                .httpOnly(httpOnly)
+                .secure(true)
+                .path("/")
+                .maxAge(maxAge)
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    private void expireCookie(HttpServletResponse response, String name) {
+        ResponseCookie cookie = ResponseCookie.from(name, "")
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(0)
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+}
