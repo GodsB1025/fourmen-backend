@@ -1,5 +1,7 @@
 package com.fourmen.meetingplatform.common.handler;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fourmen.meetingplatform.common.exception.CustomException;
 import com.fourmen.meetingplatform.common.response.ApiResponse;
 import com.fourmen.meetingplatform.common.response.ApiResponseMessage;
@@ -21,6 +23,8 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 @RestControllerAdvice(basePackages = "com.fourmen.meetingplatform")
 public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     @Override
     public boolean supports(@NonNull MethodParameter returnType,
             @NonNull Class<? extends HttpMessageConverter<?>> converterType) {
@@ -41,7 +45,12 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
         String message = (messageAnnotation != null) ? messageAnnotation.value() : "성공";
 
         if (body instanceof String) {
-            return ApiResponse.success(body, message);
+            try {
+                response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+                return objectMapper.writeValueAsString(ApiResponse.success(body, message));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("JSON writing error", e);
+            }
         }
 
         return ApiResponse.success(body, message);
