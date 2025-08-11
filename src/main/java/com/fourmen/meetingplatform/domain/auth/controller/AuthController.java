@@ -3,6 +3,7 @@ package com.fourmen.meetingplatform.domain.auth.controller;
 import com.fourmen.meetingplatform.common.response.ApiResponseMessage;
 import com.fourmen.meetingplatform.domain.auth.dto.request.LoginRequest;
 import com.fourmen.meetingplatform.domain.auth.dto.response.LoginResponse;
+import com.fourmen.meetingplatform.domain.auth.dto.response.SignUpResponse;
 import com.fourmen.meetingplatform.domain.auth.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -11,13 +12,21 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.fourmen.meetingplatform.domain.auth.dto.request.SignUpRequest;
+import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
+
+    @PostMapping("/signup")
+    @ApiResponseMessage("회원가입에 성공하였습니다.")
+    public SignUpResponse signUp(@Valid @RequestBody SignUpRequest signUpRequest) {
+        return authService.signUp(signUpRequest);
+    }
 
     @PostMapping("/login")
     @ApiResponseMessage("로그인에 성공하였습니다.")
