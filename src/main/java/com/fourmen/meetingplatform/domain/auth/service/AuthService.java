@@ -49,15 +49,15 @@ public class AuthService {
         }
 
         Role role = Role.USER;
-        Long companyId = null;
+        Company company = null;
 
         String adminCode = signUpRequest.getAdminCode();
         if (StringUtils.hasText(adminCode)) {
-            Company company = companyRepository.findByAdminCode(adminCode)
+            company = companyRepository.findByAdminCode(adminCode)
                     .orElseThrow(() -> new CustomException("유효하지 않은 관리자 코드입니다.", HttpStatus.BAD_REQUEST));
 
             role = Role.ADMIN;
-            companyId = company.getId();
+
         }
 
         String encodedPassword = passwordEncoder.encode(signUpRequest.getPassword());
@@ -68,11 +68,12 @@ public class AuthService {
                 .name(signUpRequest.getName())
                 .phone(signUpRequest.getPhone())
                 .role(role)
-                .companyId(companyId)
+                .company(company)
                 .build();
 
         User savedUser = userRepository.save(user);
-        vicolloClient.createOrUpdateMember(new VicolloRequest.CreateMember(user.getId().toString(), user.getName(), "")).block();
+        vicolloClient.createOrUpdateMember(new VicolloRequest.CreateMember(user.getId().toString(), user.getName(), ""))
+                .block();
 
         return SignUpResponse.from(savedUser);
     }

@@ -1,7 +1,6 @@
 package com.fourmen.meetingplatform.domain.user.service;
 
 import com.fourmen.meetingplatform.common.exception.CustomException;
-import com.fourmen.meetingplatform.domain.company.repository.CompanyRepository;
 import com.fourmen.meetingplatform.domain.user.dto.response.CompanyResponse;
 import com.fourmen.meetingplatform.domain.user.dto.response.UserInfoResponse;
 import com.fourmen.meetingplatform.domain.user.entity.User;
@@ -16,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final CompanyRepository companyRepository;
 
     @Transactional(readOnly = true)
     public UserInfoResponse getUserInfo(String email) {
@@ -25,9 +23,7 @@ public class UserService {
 
         CompanyResponse companyResponse = null;
         if (user.getCompany() != null) {
-            companyResponse = companyRepository.findById(user.getCompany().getId())
-                    .map(CompanyResponse::from)
-                    .orElse(null);
+            companyResponse = CompanyResponse.from(user.getCompany());
         }
 
         return UserInfoResponse.from(user, companyResponse);

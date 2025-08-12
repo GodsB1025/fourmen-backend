@@ -34,7 +34,7 @@ public class CompanyService {
             throw new CustomException("소속된 회사가 없어 멤버를 조회할 수 없습니다.", HttpStatus.FORBIDDEN);
         }
 
-        List<User> members = userRepository.findByCompanyId(company.getId());
+        List<User> members = userRepository.findByCompany_Id(company.getId());
 
         return members.stream()
                 .map(MemberResponse::from)
