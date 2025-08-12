@@ -19,7 +19,7 @@ public class SignUpResponse {
                 .userId(user.getId())
                 .email(user.getEmail())
                 .name(user.getName())
-                .companyId(user.getCompanyId())
+                .companyId(user.getCompany().getId())
                 .role(user.getRole())
                 .build();
     }
