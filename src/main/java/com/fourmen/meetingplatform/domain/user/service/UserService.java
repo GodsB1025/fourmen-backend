@@ -24,8 +24,8 @@ public class UserService {
                 .orElseThrow(() -> new CustomException("해당 사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
         CompanyResponse companyResponse = null;
-        if (user.getCompanyId() != null) {
-            companyResponse = companyRepository.findById(user.getCompanyId())
+        if (user.getCompany() != null) {
+            companyResponse = companyRepository.findById(user.getCompany().getId())
                     .map(CompanyResponse::from)
                     .orElse(null);
         }

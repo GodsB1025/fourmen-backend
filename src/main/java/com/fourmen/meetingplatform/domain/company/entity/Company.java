@@ -19,12 +19,12 @@ public class Company {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "admin_code", nullable = false, unique = true)
     private String adminCode;
 
-    @Column(nullable = false)
+    @Column(name = "contract_start_date", nullable = false)
     private LocalDate contractStartDate;
 
-    @Column(nullable = false)
+    @Column(name = "contract_end_date", nullable = false)
     private LocalDate contractEndDate;
 }
