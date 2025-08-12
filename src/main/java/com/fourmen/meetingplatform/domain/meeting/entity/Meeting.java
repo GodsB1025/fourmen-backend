@@ -8,6 +8,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -20,11 +22,11 @@ public class Meeting {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "host_id", nullable = false)
+    @JoinColumn(name = "host_id", nullable = false) // 수정된 부분
     private User host;
 
     @Column(name = "room_id")
-    private Integer roomId; // int -> Integer 로 변경하여 NULL 허용
+    private Integer roomId;
 
     @Column(nullable = false)
     private String title;
@@ -32,6 +34,9 @@ public class Meeting {
     private LocalDateTime scheduledAt;
 
     private boolean useAiMinutes;
+
+    @OneToMany(mappedBy = "meeting", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<MeetingParticipant> participants = new ArrayList<>();
 
     @Builder
     public Meeting(User host, String title, LocalDateTime scheduledAt, boolean useAiMinutes) {
@@ -41,7 +46,7 @@ public class Meeting {
         this.useAiMinutes = useAiMinutes;
     }
 
-    public void updateRoomId(Integer roomId) { // int -> Integer
+    public void updateRoomId(Integer roomId) {
         this.roomId = roomId;
     }
 }

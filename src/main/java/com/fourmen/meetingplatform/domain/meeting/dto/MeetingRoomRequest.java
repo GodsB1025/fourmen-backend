@@ -8,7 +8,9 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 public class MeetingRoomRequest {
-    private String title;
+    private String description;
     private String password;
+    private boolean manuallyApproval = true;
+    private boolean canAutoRoomCompositeRecording = true;
     private LocalDateTime scheduledAt;
 }

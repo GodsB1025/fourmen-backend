@@ -4,6 +4,7 @@ import com.fourmen.meetingplatform.common.exception.CustomException;
 import com.fourmen.meetingplatform.domain.meeting.dto.MeetingRoomRequest;
 import com.fourmen.meetingplatform.domain.meeting.dto.MeetingRoomResponse;
 import com.fourmen.meetingplatform.domain.meeting.dto.VicolloRequest;
+import com.fourmen.meetingplatform.domain.meeting.dto.VicolloResponse;
 import com.fourmen.meetingplatform.domain.meeting.entity.Meeting;
 import com.fourmen.meetingplatform.domain.meeting.repository.MeetingRepository;
 import com.fourmen.meetingplatform.domain.user.entity.User;
@@ -12,8 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 @Service
 @RequiredArgsConstructor
@@ -24,98 +23,58 @@ public class MeetingRoomService {
     private final VicolloClient vicolloClient;
 
     @Transactional
-    public void createVicolloMember(String userEmail) {
+    public void createOrUpdateVicolloMember(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new CustomException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
         String appUserId = user.getId().toString();
         String displayName = user.getName();
-        String profileImgUrl = null; // TODO: Add user profile image URL
+        String profileImgUrl = "";
 
         vicolloClient.createOrUpdateMember(new VicolloRequest.CreateMember(appUserId, displayName, profileImgUrl)).block();
     }
 
     @Transactional
-    public MeetingRoomResponse joinOrEnterMeeting(Long meetingId, String userEmail, MeetingRoomRequest request) {
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new CustomException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
-
+    public MeetingRoomResponse createVideoRoomAndGetEmbedUrl(Long meetingId, MeetingRoomRequest request, User user) {
         Meeting meeting = meetingRepository.findById(meetingId)
-                .orElseThrow(() -> new CustomException("회의를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new CustomException("해당 회의를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
-        createVicolloMember(userEmail);
-
-        Integer roomId = meeting.getRoomId();
-
-        if (roomId == null || roomId <= 0) {
-            VicolloRequest.CreateRoom createRoomRequest = buildCreateRoomRequest(user, meeting, request);
-
-            roomId = vicolloClient.createVideoRoom(createRoomRequest)
-                    .blockOptional()
-                    .orElseThrow(() -> new CustomException("Vicollo 회의실 생성에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR))
-                    .getVideoRoomId();
-
-            meeting.updateRoomId(roomId);
+        if (!meeting.getHost().getId().equals(user.getId())) {
+            throw new CustomException("회의 호스트만 화상회의를 시작할 수 있습니다.", HttpStatus.FORBIDDEN);
         }
 
-        String displayName = user.getName();
-        VicolloRequest.CreateEmbedUrl createEmbedUrlRequest = new VicolloRequest.CreateEmbedUrl(displayName, false);
-
-        String embedUrl = vicolloClient.createEmbedUrl(roomId, user.getId(), createEmbedUrlRequest)
-                .blockOptional()
-                .orElseThrow(() -> new CustomException("임베디드 URL 생성에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR))
-                .getUrl();
-
-        return new MeetingRoomResponse(embedUrl);
-    }
-
-    private VicolloRequest.CreateRoom buildCreateRoomRequest(User user, Meeting meeting, MeetingRoomRequest request) {
-        LocalDateTime scheduledAt = request.getScheduledAt() != null ? request.getScheduledAt() : meeting.getScheduledAt();
-
-        VicolloRequest.VisibleItem visibleTrue = VicolloRequest.VisibleItem.builder().visible(true).build();
-
-        VicolloRequest.Controls defaultControls = VicolloRequest.Controls.builder()
-                .toggleCamera(visibleTrue)
-                .toggleMicrophone(visibleTrue)
-                .toggleScreenShare(visibleTrue)
-                .toggleBackgroundBlur(visibleTrue)
-                .toggleVirtualBackground(visibleTrue)
-                .toggleLayout(visibleTrue)
-                .toggleFocusingSpeaker(visibleTrue)
-                .copyRoomUuid(visibleTrue)
-                .emojiReactions(visibleTrue)
-                .handRaise(visibleTrue)
-                .toggleWhiteBoard(visibleTrue)
-                .build();
-
-        VicolloRequest.Header defaultHeader = VicolloRequest.Header.builder()
-                .logo(VicolloRequest.Logo.builder().visible(true).url("").build()) // Now this works
-                .title(visibleTrue)
-                .userCount(visibleTrue)
-                .currentTime(visibleTrue)
-                .leave(VicolloRequest.Leave.builder().visible(true).url("").build()) // And this works
-                .build();
-
-        VicolloRequest.ViewOptions defaultViewOptions = VicolloRequest.ViewOptions.builder()
-                .theme(VicolloRequest.Theme.builder().color("dark").build())
-                .header(defaultHeader)
-                .sideBar(VicolloRequest.SideBar.builder().visible(true).build())
-                .controls(defaultControls)
-                .build();
-
-        VicolloRequest.CreateRoom.CreateRoomBuilder builder = VicolloRequest.CreateRoom.builder()
+        // Vicollo API 요청 객체를 명시적으로 생성
+        VicolloRequest.CreateRoom vicolloRequest = VicolloRequest.CreateRoom.builder()
                 .appUserId(user.getId().toString())
-                .title(request.getTitle() != null ? request.getTitle() : meeting.getTitle())
+                .title(meeting.getTitle())
+                .description(request.getDescription())
                 .password(request.getPassword())
-                .description("")
-                .manuallyApproval(false)
-                .canAutoRoomCompositeRecording(meeting.isUseAiMinutes())
-                .viewOptions(defaultViewOptions);
+                .manuallyApproval(true) // 고정값
+                .canAutoRoomCompositeRecording(true) // 고정값
+                .viewOptions(VicolloRequest.ViewOptions.defaultOptions()) // 기본 옵션 설정
+                .build();
 
-        if (scheduledAt != null) {
-            builder.scheduledAt(scheduledAt.format(DateTimeFormatter.ISO_DATE_TIME));
+        if (request.getScheduledAt() != null) {
+            vicolloRequest.setScheduledAt(request.getScheduledAt());
         }
 
-        return builder.build();
+        // Vicollo API 호출
+        VicolloResponse.Room vicolloRoom = vicolloClient.createVideoRoom(vicolloRequest)
+                .blockOptional()
+                .orElseThrow(() -> new CustomException("Vicollo 회의실 생성에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR));
+
+        Integer videoRoomId = vicolloRoom.getVideoRoomId();
+        meeting.updateRoomId(videoRoomId);
+        meetingRepository.save(meeting);
+
+        // Embed URL 생성 요청
+        VicolloRequest.CreateEmbedUrl embedUrlRequest = VicolloRequest.CreateEmbedUrl.builder()
+                .displayName(user.getName())
+                .build();
+        VicolloResponse.EmbedUrl embedUrlResponse = vicolloClient.createEmbedUrl(videoRoomId, user.getId().toString(), embedUrlRequest)
+                .blockOptional()
+                .orElseThrow(() -> new CustomException("Embed URL 생성에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR));
+
+        return new MeetingRoomResponse(embedUrlResponse.getUrl());
     }
 }
