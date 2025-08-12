@@ -20,7 +20,7 @@ public class LoginResponse {
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
-                .companyId(user.getCompanyId())
+                .companyId(user.getCompany().getId())
                 .build();
     }
 }
