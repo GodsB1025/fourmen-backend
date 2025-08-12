@@ -3,6 +3,8 @@ package com.fourmen.meetingplatform.domain.auth.service;
 import com.fourmen.meetingplatform.config.jwt.JwtTokenProvider;
 import com.fourmen.meetingplatform.domain.auth.dto.request.LoginRequest;
 import com.fourmen.meetingplatform.domain.auth.dto.response.LoginResponse;
+import com.fourmen.meetingplatform.domain.meeting.dto.VicolloRequest;
+import com.fourmen.meetingplatform.domain.meeting.service.VicolloClient;
 import com.fourmen.meetingplatform.domain.user.entity.User;
 import com.fourmen.meetingplatform.domain.user.repository.UserRepository;
 import jakarta.servlet.http.Cookie;
@@ -38,6 +40,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final CompanyRepository companyRepository;
+    private final VicolloClient vicolloClient;
 
     @Transactional
     public SignUpResponse signUp(SignUpRequest signUpRequest) {
@@ -69,6 +72,7 @@ public class AuthService {
                 .build();
 
         User savedUser = userRepository.save(user);
+        vicolloClient.createOrUpdateMember(new VicolloRequest.CreateMember(user.getId().toString(), user.getName(), "")).block();
 
         return SignUpResponse.from(savedUser);
     }

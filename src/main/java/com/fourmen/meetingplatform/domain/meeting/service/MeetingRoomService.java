@@ -1,0 +1,80 @@
+package com.fourmen.meetingplatform.domain.meeting.service;
+
+import com.fourmen.meetingplatform.common.exception.CustomException;
+import com.fourmen.meetingplatform.domain.meeting.dto.MeetingRoomRequest;
+import com.fourmen.meetingplatform.domain.meeting.dto.MeetingRoomResponse;
+import com.fourmen.meetingplatform.domain.meeting.dto.VicolloRequest;
+import com.fourmen.meetingplatform.domain.meeting.dto.VicolloResponse;
+import com.fourmen.meetingplatform.domain.meeting.entity.Meeting;
+import com.fourmen.meetingplatform.domain.meeting.repository.MeetingRepository;
+import com.fourmen.meetingplatform.domain.user.entity.User;
+import com.fourmen.meetingplatform.domain.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+public class MeetingRoomService {
+
+    private final MeetingRepository meetingRepository;
+    private final UserRepository userRepository;
+    private final VicolloClient vicolloClient;
+
+    @Transactional
+    public void createOrUpdateVicolloMember(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new CustomException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+
+        String appUserId = user.getId().toString();
+        String displayName = user.getName();
+        String profileImgUrl = "";
+
+        vicolloClient.createOrUpdateMember(new VicolloRequest.CreateMember(appUserId, displayName, profileImgUrl)).block();
+    }
+
+    @Transactional
+    public MeetingRoomResponse createVideoRoomAndGetEmbedUrl(Long meetingId, MeetingRoomRequest request, User user) {
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new CustomException("해당 회의를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+
+        if (!meeting.getHost().getId().equals(user.getId())) {
+            throw new CustomException("회의 호스트만 화상회의를 시작할 수 있습니다.", HttpStatus.FORBIDDEN);
+        }
+
+        // Vicollo API 요청 객체를 명시적으로 생성
+        VicolloRequest.CreateRoom vicolloRequest = VicolloRequest.CreateRoom.builder()
+                .appUserId(user.getId().toString())
+                .title(meeting.getTitle())
+                .description(request.getDescription())
+                .password(request.getPassword())
+                .manuallyApproval(true) // 고정값
+                .canAutoRoomCompositeRecording(true) // 고정값
+                .viewOptions(VicolloRequest.ViewOptions.defaultOptions()) // 기본 옵션 설정
+                .build();
+
+        if (request.getScheduledAt() != null) {
+            vicolloRequest.setScheduledAt(request.getScheduledAt());
+        }
+
+        // Vicollo API 호출
+        VicolloResponse.Room vicolloRoom = vicolloClient.createVideoRoom(vicolloRequest)
+                .blockOptional()
+                .orElseThrow(() -> new CustomException("Vicollo 회의실 생성에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR));
+
+        Integer videoRoomId = vicolloRoom.getVideoRoomId();
+        meeting.updateRoomId(videoRoomId);
+        meetingRepository.save(meeting);
+
+        // Embed URL 생성 요청
+        VicolloRequest.CreateEmbedUrl embedUrlRequest = VicolloRequest.CreateEmbedUrl.builder()
+                .displayName(user.getName())
+                .build();
+        VicolloResponse.EmbedUrl embedUrlResponse = vicolloClient.createEmbedUrl(videoRoomId, user.getId().toString(), embedUrlRequest)
+                .blockOptional()
+                .orElseThrow(() -> new CustomException("Embed URL 생성에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR));
+
+        return new MeetingRoomResponse(embedUrlResponse.getUrl());
+    }
+}
