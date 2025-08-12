@@ -46,7 +46,7 @@ public class User implements UserDetails {
     private String refreshToken;
 
     @Builder
-    public User(String email, String password, String name, String phone, Long companyId, Role role) {
+    public User(String email, String password, String name, String phone, Company company, Role role) {
         this.email = email;
         this.password = password;
         this.name = name;

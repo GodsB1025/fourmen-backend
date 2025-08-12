@@ -10,7 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/meetings")
+@RequestMapping("/meetings")
 @RequiredArgsConstructor
 public class MeetingRoomController {
 
@@ -18,13 +18,13 @@ public class MeetingRoomController {
 
     /**
      * Vicollo 멤버 생성을 위한 엔드포인트 (회원가입 시 이미 처리되므로, 필요 시 사용)
+     * 
      * @param user 현재 로그인한 사용자 정보
      */
     @PostMapping("/members")
     @ApiResponseMessage("Vicollo 멤버 생성/업데이트에 성공했습니다.")
     public void createVicolloMember(
-            @AuthenticationPrincipal User user
-    ) {
+            @AuthenticationPrincipal User user) {
         meetingRoomService.createOrUpdateVicolloMember(user.getEmail());
     }
 
@@ -36,8 +36,7 @@ public class MeetingRoomController {
     public MeetingRoomResponse createVideoRoomAndGetEmbedUrl(
             @PathVariable Long meetingId,
             @RequestBody MeetingRoomRequest request,
-            @AuthenticationPrincipal User user
-    ) {
+            @AuthenticationPrincipal User user) {
         return meetingRoomService.createVideoRoomAndGetEmbedUrl(meetingId, request, user);
     }
 }

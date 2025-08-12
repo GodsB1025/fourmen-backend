@@ -31,8 +31,10 @@ public class Meeting {
     @Column(nullable = false)
     private String title;
 
+    @Column(name = "scheduled_at")
     private LocalDateTime scheduledAt;
 
+    @Column(name = "use_ai_minutes")
     private boolean useAiMinutes;
 
     @OneToMany(mappedBy = "meeting", cascade = CascadeType.ALL, orphanRemoval = true)

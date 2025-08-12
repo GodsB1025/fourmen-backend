@@ -1,5 +1,6 @@
 package com.fourmen.meetingplatform.domain.auth.dto.response;
 
+import com.fourmen.meetingplatform.domain.user.dto.response.CompanyResponse;
 import com.fourmen.meetingplatform.domain.user.entity.Role;
 import com.fourmen.meetingplatform.domain.user.entity.User;
 import lombok.Builder;
@@ -12,15 +13,19 @@ public class LoginResponse {
     private String name;
     private String email;
     private Role role;
-    private Long companyId;
+    private CompanyResponse company;
 
     public static LoginResponse from(User user) {
+        CompanyResponse companyResponse = (user.getCompany() != null)
+                ? CompanyResponse.from(user.getCompany())
+                : null;
+
         return LoginResponse.builder()
                 .userId(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
-                .companyId(user.getCompany().getId())
+                .company(companyResponse)
                 .build();
     }
 }
