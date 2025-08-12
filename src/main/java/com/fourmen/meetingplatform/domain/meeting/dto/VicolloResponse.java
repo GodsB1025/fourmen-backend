@@ -8,7 +8,7 @@ public class VicolloResponse {
     @Getter
     @NoArgsConstructor
     public static class Room {
-        private String videoRoomId;
+        private int videoRoomId;
         // ... 응답에 포함된 다른 필드들 ...
     }
 

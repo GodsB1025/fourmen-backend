@@ -18,7 +18,7 @@ public class VicolloClient {
     private final String authHeader;
 
     public VicolloClient(WebClient.Builder webClientBuilder,
-                         @Value("${vicollo.api.app-id}") String appId,
+                         @Value("${vicollo.api.app-id}") String appId, // String으로 받아야 함
                          @Value("${vicollo.api.app-secret}") String appSecret) {
         this.webClient = webClientBuilder.baseUrl("https://portal.flipflop.cloud").build();
         this.authHeader = "Basic " + Base64.getEncoder().encodeToString((appId + ":" + appSecret).getBytes());
@@ -47,7 +47,7 @@ public class VicolloClient {
     }
 
     // Vicollo 참여자용 임베디드 URL 생성
-    public Mono<VicolloResponse.EmbedUrl> createEmbedUrl(String videoRoomId, String appUserId, VicolloRequest.CreateEmbedUrl request) {
+    public Mono<VicolloResponse.EmbedUrl> createEmbedUrl(int videoRoomId, Long appUserId, VicolloRequest.CreateEmbedUrl request) {
         return webClient.post()
                 .uri("/v2/vicollo-apps/me/video-rooms/{videoRoomId}/members/{appUserId}/embed-url", videoRoomId, appUserId)
                 .header(HttpHeaders.AUTHORIZATION, authHeader)

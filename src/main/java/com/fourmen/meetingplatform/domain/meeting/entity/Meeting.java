@@ -24,7 +24,7 @@ public class Meeting {
     private User host;
 
     @Column(name = "room_id")
-    private String roomId;
+    private Integer roomId; // int -> Integer 로 변경하여 NULL 허용
 
     @Column(nullable = false)
     private String title;
@@ -41,7 +41,7 @@ public class Meeting {
         this.useAiMinutes = useAiMinutes;
     }
 
-    public void updateRoomId(String roomId) {
+    public void updateRoomId(Integer roomId) { // int -> Integer
         this.roomId = roomId;
     }
 }
