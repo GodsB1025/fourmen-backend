@@ -13,16 +13,13 @@ public class VicolloResponse {
     public static class Room {
         @JsonProperty("id")
         private Integer videoRoomId;
-        // ... 다른 필드들
     }
 
     @Getter
     @NoArgsConstructor
     @ToString
     public static class EmbedUrl {
-        // 수정된 부분: 실제 JSON 키 값으로 변경
         @JsonProperty("videoRoomEmbedUrl")
         private String url;
-        // ... 다른 필드들
     }
 }
