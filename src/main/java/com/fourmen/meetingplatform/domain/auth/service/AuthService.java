@@ -3,7 +3,7 @@ package com.fourmen.meetingplatform.domain.auth.service;
 import com.fourmen.meetingplatform.config.jwt.JwtTokenProvider;
 import com.fourmen.meetingplatform.domain.auth.dto.request.LoginRequest;
 import com.fourmen.meetingplatform.domain.auth.dto.response.LoginResponse;
-import com.fourmen.meetingplatform.domain.meeting.dto.VicolloRequest;
+import com.fourmen.meetingplatform.domain.meeting.dto.request.VicolloRequest;
 import com.fourmen.meetingplatform.domain.meeting.service.VicolloClient;
 import com.fourmen.meetingplatform.domain.user.entity.User;
 import com.fourmen.meetingplatform.domain.user.repository.UserRepository;
@@ -41,9 +41,16 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final CompanyRepository companyRepository;
     private final VicolloClient vicolloClient;
+    private final RedisService redisService; // RedisService 의존성 주입
 
     @Transactional
     public SignUpResponse signUp(SignUpRequest signUpRequest) {
+        // 1. 이메일 인증 여부 확인
+        String isVerified = redisService.getData("VERIFIED:" + signUpRequest.getEmail());
+        if (isVerified == null || !isVerified.equals("true")) {
+            throw new CustomException("이메일 인증이 필요합니다.", HttpStatus.BAD_REQUEST);
+        }
+
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
             throw new CustomException("이미 가입된 이메일입니다.", HttpStatus.BAD_REQUEST);
         }
@@ -55,9 +62,7 @@ public class AuthService {
         if (StringUtils.hasText(adminCode)) {
             company = companyRepository.findByAdminCode(adminCode)
                     .orElseThrow(() -> new CustomException("유효하지 않은 관리자 코드입니다.", HttpStatus.BAD_REQUEST));
-
             role = Role.ADMIN;
-
         }
 
         String encodedPassword = passwordEncoder.encode(signUpRequest.getPassword());
@@ -74,6 +79,9 @@ public class AuthService {
         User savedUser = userRepository.save(user);
         vicolloClient.createOrUpdateMember(new VicolloRequest.CreateMember(user.getId().toString(), user.getName(), ""))
                 .block();
+
+        // 2. 회원가입 성공 후 인증 완료 데이터 삭제
+        redisService.deleteData("VERIFIED:" + signUpRequest.getEmail());
 
         return SignUpResponse.from(savedUser);
     }

@@ -1,4 +1,4 @@
-package com.fourmen.meetingplatform.domain.meeting.dto;
+package com.fourmen.meetingplatform.domain.meeting.dto.request;
 
 import lombok.Getter;
 import lombok.Setter;

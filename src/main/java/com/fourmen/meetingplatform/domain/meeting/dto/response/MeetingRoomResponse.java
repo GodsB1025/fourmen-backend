@@ -1,4 +1,4 @@
-package com.fourmen.meetingplatform.domain.meeting.dto;
+package com.fourmen.meetingplatform.domain.meeting.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

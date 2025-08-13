@@ -1,8 +1,8 @@
 package com.fourmen.meetingplatform.domain.meeting.service;
 
 import com.fourmen.meetingplatform.common.exception.CustomException;
-import com.fourmen.meetingplatform.domain.meeting.dto.MeetingRequest;
-import com.fourmen.meetingplatform.domain.meeting.dto.MeetingResponse;
+import com.fourmen.meetingplatform.domain.meeting.dto.request.MeetingRequest;
+import com.fourmen.meetingplatform.domain.meeting.dto.response.MeetingResponse;
 import com.fourmen.meetingplatform.domain.meeting.entity.Meeting;
 import com.fourmen.meetingplatform.domain.meeting.entity.MeetingParticipant;
 import com.fourmen.meetingplatform.domain.meeting.repository.MeetingParticipantRepository;
@@ -13,9 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
