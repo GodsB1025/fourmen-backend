@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Meeting Platform 이메일 인증</title>
+</head>
+<body>
+<h1>[Meeting Platform] 이메일 인증 코드 안내</h1>
+<p>안녕하세요. Meeting Platform 회원가입을 위해 아래의 6자리 인증 코드를 입력해주세요.</p>
+<div style="border: 1px solid #e0e0e0; padding: 20px; margin: 20px 0; font-size: 24px; text-align: center; background-color: #f9f9f9; border-radius: 5px;">
+    <strong th:text="${code}">123456</strong>
+</div>
+<p>본 이메일은 발신 전용입니다.</p>
+</body>
+</html>
