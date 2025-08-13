@@ -1,8 +1,8 @@
 package com.fourmen.meetingplatform.domain.meeting.controller;
 
 import com.fourmen.meetingplatform.common.response.ApiResponseMessage;
-import com.fourmen.meetingplatform.domain.meeting.dto.MeetingRequest;
-import com.fourmen.meetingplatform.domain.meeting.dto.MeetingResponse;
+import com.fourmen.meetingplatform.domain.meeting.dto.request.MeetingRequest;
+import com.fourmen.meetingplatform.domain.meeting.dto.response.MeetingResponse;
 import com.fourmen.meetingplatform.domain.meeting.service.MeetingService;
 import com.fourmen.meetingplatform.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
