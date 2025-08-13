@@ -1,7 +1,7 @@
 package com.fourmen.meetingplatform.domain.meeting.service;
 
-import com.fourmen.meetingplatform.domain.meeting.dto.VicolloRequest;
-import com.fourmen.meetingplatform.domain.meeting.dto.VicolloResponse;
+import com.fourmen.meetingplatform.domain.meeting.dto.request.VicolloRequest;
+import com.fourmen.meetingplatform.domain.meeting.dto.response.VicolloResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;

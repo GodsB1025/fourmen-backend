@@ -1,4 +1,4 @@
-package com.fourmen.meetingplatform.domain.meeting.dto;
+package com.fourmen.meetingplatform.domain.meeting.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -6,7 +6,6 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.ZoneOffset;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)

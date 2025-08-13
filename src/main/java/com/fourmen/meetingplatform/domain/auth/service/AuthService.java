@@ -3,7 +3,7 @@ package com.fourmen.meetingplatform.domain.auth.service;
 import com.fourmen.meetingplatform.config.jwt.JwtTokenProvider;
 import com.fourmen.meetingplatform.domain.auth.dto.request.LoginRequest;
 import com.fourmen.meetingplatform.domain.auth.dto.response.LoginResponse;
-import com.fourmen.meetingplatform.domain.meeting.dto.VicolloRequest;
+import com.fourmen.meetingplatform.domain.meeting.dto.request.VicolloRequest;
 import com.fourmen.meetingplatform.domain.meeting.service.VicolloClient;
 import com.fourmen.meetingplatform.domain.user.entity.User;
 import com.fourmen.meetingplatform.domain.user.repository.UserRepository;

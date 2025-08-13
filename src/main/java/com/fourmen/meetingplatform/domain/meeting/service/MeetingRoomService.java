@@ -1,10 +1,10 @@
 package com.fourmen.meetingplatform.domain.meeting.service;
 
 import com.fourmen.meetingplatform.common.exception.CustomException;
-import com.fourmen.meetingplatform.domain.meeting.dto.MeetingRoomRequest;
-import com.fourmen.meetingplatform.domain.meeting.dto.MeetingRoomResponse;
-import com.fourmen.meetingplatform.domain.meeting.dto.VicolloRequest;
-import com.fourmen.meetingplatform.domain.meeting.dto.VicolloResponse;
+import com.fourmen.meetingplatform.domain.meeting.dto.request.MeetingRoomRequest;
+import com.fourmen.meetingplatform.domain.meeting.dto.response.MeetingRoomResponse;
+import com.fourmen.meetingplatform.domain.meeting.dto.request.VicolloRequest;
+import com.fourmen.meetingplatform.domain.meeting.dto.response.VicolloResponse;
 import com.fourmen.meetingplatform.domain.meeting.entity.Meeting;
 import com.fourmen.meetingplatform.domain.meeting.repository.MeetingRepository;
 import com.fourmen.meetingplatform.domain.user.entity.User;
