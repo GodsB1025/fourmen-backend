@@ -10,20 +10,20 @@ import java.util.List;
 
 public interface MeetingRepository extends JpaRepository<Meeting, Long> {
 
-    /*
-     사용자가 주최하거나 참여자인 목록(중복제거)
-     @param userId
-     @return 해당 사용자의 모든 목록
+    /**
+     * 사용자가 주최하거나 참여자이면서 '활성화' 상태인 모든 회의 목록을 조회합니다.
+     * @param user 조회할 사용자
+     * @return 해당 사용자의 활성화된 회의 목록
      */
-    @Query("SELECT DISTINCT m FROM Meeting m LEFT JOIN m.participants p WHERE m.host = :user OR p.user = :user")
+    @Query("SELECT DISTINCT m FROM Meeting m LEFT JOIN m.participants p WHERE (m.host = :user OR p.user = :user) AND m.isActive = true")
     List<Meeting> findMyMeetings(@Param("user") User user);
 
-    /*
-    특정 회사가 주최한 목록
-    @param companyId
-    @return 해당회사의 모든회의 목록
+    /**
+     * 특정 회사가 주최하고 '활성화' 상태인 모든 회의 목록을 조회합니다.
+     * @param companyId 회사의 ID
+     * @return 해당 회사의 활성화된 회의 목록
      */
-    List<Meeting> findByHost_Company_Id(Long companyId);
+    List<Meeting> findByHost_Company_IdAndIsActiveTrue(Long companyId);
 
     /**
      * 특정 회사에 속하면서 회의록이 하나 이상 존재하는 모든 회의 목록을 조회합니다.
