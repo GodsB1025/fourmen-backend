@@ -3,6 +3,7 @@ package com.fourmen.meetingplatform.domain.meeting.controller;
 import com.fourmen.meetingplatform.common.response.ApiResponseMessage;
 import com.fourmen.meetingplatform.domain.meeting.dto.request.MeetingParticipationRequest;
 import com.fourmen.meetingplatform.domain.meeting.dto.request.MeetingRequest;
+import com.fourmen.meetingplatform.domain.meeting.dto.response.MeetingInfoForContractResponse;
 import com.fourmen.meetingplatform.domain.meeting.dto.response.MeetingResponse;
 import com.fourmen.meetingplatform.domain.meeting.service.MeetingService;
 import com.fourmen.meetingplatform.domain.minutes.dto.response.MinuteInfoResponse;
@@ -55,6 +56,17 @@ public class MeetingController {
             @Valid @RequestBody MeetingParticipationRequest request,
             @AuthenticationPrincipal User user) {
         return meetingService.participateInMeeting(request.getMeetingId(), user);
+    }
+
+    /**
+     * 계약서에 연동할, 회의록이 존재하는 회의 목록을 조회합니다.
+     * @param user 현재 인증된 사용자
+     * @return 회의 목록
+     */
+    @GetMapping("/with-minutes")
+    @ApiResponseMessage("계약서에 연동할 회의 목록 조회를 성공하였습니다.")
+    public List<MeetingInfoForContractResponse> getMeetingsWithMinutes(@AuthenticationPrincipal User user) {
+        return meetingService.getMeetingsWithMinutes(user);
     }
 
     /**

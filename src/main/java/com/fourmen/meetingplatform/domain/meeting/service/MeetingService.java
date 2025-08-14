@@ -2,6 +2,7 @@ package com.fourmen.meetingplatform.domain.meeting.service;
 
 import com.fourmen.meetingplatform.common.exception.CustomException;
 import com.fourmen.meetingplatform.domain.meeting.dto.request.MeetingRequest;
+import com.fourmen.meetingplatform.domain.meeting.dto.response.MeetingInfoForContractResponse;
 import com.fourmen.meetingplatform.domain.meeting.dto.response.MeetingResponse;
 import com.fourmen.meetingplatform.domain.meeting.entity.Meeting;
 import com.fourmen.meetingplatform.domain.meeting.entity.MeetingParticipant;
@@ -81,6 +82,7 @@ public class MeetingService {
                 .map(MeetingResponse::from)
                 .collect(Collectors.toList());
     }
+
     /**
      * 회의 참가 로직을 처리합니다.
      * @param meetingId 참가할 회의의 ID
@@ -102,6 +104,27 @@ public class MeetingService {
 
         // 3. 성공 응답 반환
         return MeetingResponse.from(meeting);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MeetingInfoForContractResponse> getMeetingsWithMinutes(User user) {
+        // 1. 권한 확인 (ADMIN 또는 CONTRACT_ADMIN)
+        if (user.getRole() != Role.ADMIN && user.getRole() != Role.CONTRACT_ADMIN) {
+            throw new CustomException("목록을 조회할 권한이 없습니다.", HttpStatus.FORBIDDEN);
+        }
+
+        // 2. 사용자 소속 회사 확인
+        if (user.getCompany() == null) {
+            throw new CustomException("소속된 회사가 없어 조회할 수 없습니다.", HttpStatus.BAD_REQUEST);
+        }
+
+        // 3. 회의록이 있는 회의 목록 조회
+        List<Meeting> meetings = meetingRepository.findMeetingsWithMinutesByCompanyId(user.getCompany().getId());
+
+        // 4. DTO로 변환하여 반환
+        return meetings.stream()
+                .map(MeetingInfoForContractResponse::from)
+                .collect(Collectors.toList());
     }
 
     /**
