@@ -37,6 +37,9 @@ public class Meeting {
     @Column(name = "use_ai_minutes")
     private boolean useAiMinutes;
 
+    @Column(name = "is_active", nullable = false)
+    private boolean isActive;
+
     @OneToMany(mappedBy = "meeting", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MeetingParticipant> participants = new ArrayList<>();
 
@@ -46,9 +49,15 @@ public class Meeting {
         this.title = title;
         this.scheduledAt = scheduledAt;
         this.useAiMinutes = useAiMinutes;
+        this.isActive = true;
     }
 
     public void updateRoomId(Integer roomId) {
+
         this.roomId = roomId;
+    }
+
+    public void deactivate() {
+        this.isActive = false;
     }
 }

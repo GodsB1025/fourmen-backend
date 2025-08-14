@@ -65,6 +65,12 @@ public class MeetingService {
      * @param user 현재 인증된 사용자
      * @return 조회된 회의 목록
      */
+    /**
+     * 활성화된 회의 목록을 조회하는 비즈니스 로직을 처리합니다.
+     * @param filter "my" 또는 "company"
+     * @param user 현재 인증된 사용자
+     * @return 조회된 회의 목록
+     */
     @Transactional(readOnly = true)
     public List<MeetingResponse> getMeetings(String filter, User user) {
         List<Meeting> meetings;
@@ -73,7 +79,8 @@ public class MeetingService {
             if (user.getCompany() == null) {
                 throw new CustomException("소속된 회사가 없어 회사 회의를 조회할 수 없습니다.", HttpStatus.BAD_REQUEST);
             }
-            meetings = meetingRepository.findByHost_Company_Id(user.getCompany().getId());
+            // 수정된 메서드 호출
+            meetings = meetingRepository.findByHost_Company_IdAndIsActiveTrue(user.getCompany().getId());
         } else { // 기본값 "my"
             meetings = meetingRepository.findMyMeetings(user);
         }

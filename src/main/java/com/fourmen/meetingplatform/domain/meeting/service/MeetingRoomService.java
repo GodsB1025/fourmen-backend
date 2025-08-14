@@ -16,6 +16,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
+
 @Service
 @RequiredArgsConstructor
 public class MeetingRoomService {
@@ -116,5 +118,20 @@ public class MeetingRoomService {
                 .orElseThrow(() -> new CustomException("화상회의 참가 URL 생성에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR));
 
         return new VideoMeetingUrlResponse(embedUrlResponse.getUrl());
+    }
+
+    @Transactional
+    public void deactivateVideoMeeting(Long meetingId, User user) {
+        // 1. 회의 존재 여부 확인
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new CustomException("해당 ID의 회의를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+
+        // 2. 요청자가 회의의 호스트인지 확인
+        if (!Objects.equals(meeting.getHost().getId(), user.getId())) {
+            throw new CustomException("회의 호스트만 회의를 비활성화할 수 있습니다.", HttpStatus.FORBIDDEN);
+        }
+
+        // 3. 회의 상태를 비활성(false)으로 변경
+        meeting.deactivate();
     }
 }
