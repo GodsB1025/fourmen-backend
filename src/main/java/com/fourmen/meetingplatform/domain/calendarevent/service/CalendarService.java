@@ -1,5 +1,7 @@
 package com.fourmen.meetingplatform.domain.calendarevent.service;
 
+import com.fourmen.meetingplatform.domain.calendarevent.dto.request.AddPersonalEventRequest;
+import com.fourmen.meetingplatform.domain.calendarevent.dto.response.AddPersonalEventResponse;
 import com.fourmen.meetingplatform.domain.calendarevent.dto.response.TodayEventResponse;
 import com.fourmen.meetingplatform.domain.calendarevent.entity.CalendarEvent;
 import com.fourmen.meetingplatform.domain.calendarevent.entity.EventType;
@@ -63,5 +65,21 @@ public class CalendarService {
         return allEvents.stream()
                 .map(TodayEventResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public AddPersonalEventResponse addPersonalEvent(AddPersonalEventRequest request, User user) {
+        CalendarEvent newEvent = CalendarEvent.builder()
+                .user(user)
+                .meeting(null) // 개인 일정은 회의와 연관되지 않음
+                .title(request.getTitle())
+                .startTime(request.getStartTime())
+                .endTime(request.getEndTime())
+                .eventType(EventType.PERSONAL)
+                .build();
+
+        CalendarEvent savedEvent = calendarEventRepository.save(newEvent);
+
+        return AddPersonalEventResponse.from(savedEvent);
     }
 }

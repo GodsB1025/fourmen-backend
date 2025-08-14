@@ -1,14 +1,16 @@
 package com.fourmen.meetingplatform.domain.calendarevent.controller;
 
 import com.fourmen.meetingplatform.common.response.ApiResponseMessage;
+import com.fourmen.meetingplatform.domain.calendarevent.dto.request.AddPersonalEventRequest;
+import com.fourmen.meetingplatform.domain.calendarevent.dto.response.AddPersonalEventResponse;
 import com.fourmen.meetingplatform.domain.calendarevent.dto.response.TodayEventResponse;
 import com.fourmen.meetingplatform.domain.calendarevent.service.CalendarService;
 import com.fourmen.meetingplatform.domain.user.entity.User;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -29,6 +31,15 @@ public class CalendarController {
     @ApiResponseMessage("전체 캘린더 일정 조회를 성공하였습니다.")
     public List<TodayEventResponse> getAllEvents(@AuthenticationPrincipal User user) {
         return calendarService.getAllEvents(user);
+    }
+
+    @PostMapping("/add")
+    @ResponseStatus(HttpStatus.CREATED)
+    @ApiResponseMessage("일정이 성공적으로 추가되었습니다.")
+    public AddPersonalEventResponse addPersonalEvent(
+            @Valid @RequestBody AddPersonalEventRequest request,
+            @AuthenticationPrincipal User user) {
+        return calendarService.addPersonalEvent(request, user);
     }
 
 }
