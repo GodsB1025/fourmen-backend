@@ -1,5 +1,6 @@
 package com.fourmen.meetingplatform.domain.calendarevent.service;
 
+import com.fourmen.meetingplatform.domain.calendarevent.dto.response.TodayEventResponse;
 import com.fourmen.meetingplatform.domain.calendarevent.entity.CalendarEvent;
 import com.fourmen.meetingplatform.domain.calendarevent.entity.EventType;
 import com.fourmen.meetingplatform.domain.calendarevent.repository.CalendarEventRepository;
@@ -9,7 +10,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,5 +37,20 @@ public class CalendarService {
                     .build();
             calendarEventRepository.save(calendarEvent);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<TodayEventResponse> getTodayEvents(User user) {
+        // 1. 오늘의 시작과 끝 시간 계산
+        LocalDateTime startOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
+        LocalDateTime endOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
+
+        // 2. Repository를 통해 오늘 일정 조회
+        List<CalendarEvent> todayEvents = calendarEventRepository.findByUserAndStartTimeBetween(user, startOfDay, endOfDay);
+
+        // 3. DTO로 변환하여 반환
+        return todayEvents.stream()
+                .map(TodayEventResponse::from)
+                .collect(Collectors.toList());
     }
 }
