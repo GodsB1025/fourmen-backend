@@ -5,6 +5,8 @@ import com.fourmen.meetingplatform.domain.meeting.dto.request.MeetingParticipati
 import com.fourmen.meetingplatform.domain.meeting.dto.request.MeetingRequest;
 import com.fourmen.meetingplatform.domain.meeting.dto.response.MeetingInfoForContractResponse;
 import com.fourmen.meetingplatform.domain.meeting.dto.response.MeetingResponse;
+import com.fourmen.meetingplatform.domain.meeting.dto.response.VideoMeetingUrlResponse;
+import com.fourmen.meetingplatform.domain.meeting.service.MeetingRoomService;
 import com.fourmen.meetingplatform.domain.meeting.service.MeetingService;
 import com.fourmen.meetingplatform.domain.minutes.dto.response.MinuteInfoResponse;
 import com.fourmen.meetingplatform.domain.user.entity.User;
@@ -22,6 +24,7 @@ import java.util.List;
 public class MeetingController {
 
     private final MeetingService meetingService;
+    private final MeetingRoomService meetingRoomService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -81,5 +84,19 @@ public class MeetingController {
             @PathVariable Long meetingId,
             @AuthenticationPrincipal User user) {
         return meetingService.getMinutesForContract(meetingId, user);
+    }
+
+    /**
+     * 화상회의에 참가합니다.
+     * @param meetingId 참가할 회의 ID
+     * @param user 현재 인증된 사용자
+     * @return 화상회의 참가 URL
+     */
+    @PostMapping("/{meetingId}/enter-video")
+    @ApiResponseMessage("화상회의 참가에 성공했습니다.")
+    public VideoMeetingUrlResponse enterVideoMeeting(
+            @PathVariable Long meetingId,
+            @AuthenticationPrincipal User user) {
+        return meetingRoomService.enterVideoMeeting(meetingId, user);
     }
 }
