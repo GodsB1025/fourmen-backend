@@ -73,4 +73,27 @@ public class MeetingService {
                 .map(MeetingResponse::from)
                 .collect(Collectors.toList());
     }
+    /**
+     * 회의 참가 로직을 처리합니다.
+     * @param meetingId 참가할 회의의 ID
+     * @param user 현재 인증된 사용자
+     * @return 참가한 회의 정보
+     */
+    @Transactional(readOnly = true)
+    public MeetingResponse participateInMeeting(Long meetingId, User user) {
+        // 1. 회의 존재 여부 확인
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new CustomException("해당 ID의 회의를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+
+        // 2. 사용자가 해당 회의의 참여자인지 확인
+        boolean isParticipant = meetingParticipantRepository.existsByMeeting_IdAndUser_Id(meetingId, user.getId());
+
+        if (!isParticipant) {
+            throw new CustomException("해당 회의에 참여할 권한이 없습니다.", HttpStatus.FORBIDDEN);
+        }
+
+        // 3. 성공 응답 반환
+        return MeetingResponse.from(meeting);
+    }
+
 }
