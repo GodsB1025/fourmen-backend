@@ -60,4 +60,17 @@ public class CalendarEvent {
         this.endTime = endTime;
         this.eventType = eventType;
     }
+
+    // 수정 메서드 추가
+    public void update(String title, LocalDateTime startTime, LocalDateTime endTime) {
+        if (title != null) {
+            this.title = title;
+        }
+        if (startTime != null) {
+            this.startTime = startTime;
+        }
+        if (endTime != null) {
+            this.endTime = endTime;
+        }
+    }
 }

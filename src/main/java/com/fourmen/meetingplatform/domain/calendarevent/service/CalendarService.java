@@ -1,14 +1,18 @@
 package com.fourmen.meetingplatform.domain.calendarevent.service;
 
+import com.fourmen.meetingplatform.common.exception.CustomException;
 import com.fourmen.meetingplatform.domain.calendarevent.dto.request.AddPersonalEventRequest;
+import com.fourmen.meetingplatform.domain.calendarevent.dto.request.UpdatePersonalEventRequest;
 import com.fourmen.meetingplatform.domain.calendarevent.dto.response.AddPersonalEventResponse;
 import com.fourmen.meetingplatform.domain.calendarevent.dto.response.TodayEventResponse;
+import com.fourmen.meetingplatform.domain.calendarevent.dto.response.UpdatePersonalEventResponse;
 import com.fourmen.meetingplatform.domain.calendarevent.entity.CalendarEvent;
 import com.fourmen.meetingplatform.domain.calendarevent.entity.EventType;
 import com.fourmen.meetingplatform.domain.calendarevent.repository.CalendarEventRepository;
 import com.fourmen.meetingplatform.domain.meeting.entity.Meeting;
 import com.fourmen.meetingplatform.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +20,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -81,5 +86,26 @@ public class CalendarService {
         CalendarEvent savedEvent = calendarEventRepository.save(newEvent);
 
         return AddPersonalEventResponse.from(savedEvent);
+    }
+
+    @Transactional
+    public UpdatePersonalEventResponse updatePersonalEvent(Long eventId, UpdatePersonalEventRequest request, User user) {
+        // 1. 일정 조회
+        CalendarEvent event = calendarEventRepository.findById(eventId)
+                .orElseThrow(() -> new CustomException("해당 ID의 일정을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+
+        // 2. 권한 확인 (본인이 생성한 개인 일정만 수정 가능)
+        if (!Objects.equals(event.getUser().getId(), user.getId())) {
+            throw new CustomException("일정을 수정할 권한이 없습니다.", HttpStatus.FORBIDDEN);
+        }
+        if (event.getEventType() != EventType.PERSONAL) {
+            throw new CustomException("개인 일정만 수정할 수 있습니다.", HttpStatus.BAD_REQUEST);
+        }
+
+        // 3. 엔티티 수정 (더티 체킹 활용)
+        event.update(request.getTitle(), request.getStartTime(), request.getEndTime());
+
+        // 4. 응답 DTO로 변환하여 반환
+        return UpdatePersonalEventResponse.from(event);
     }
 }
