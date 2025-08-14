@@ -15,6 +15,7 @@ public class MeetingResponse {
     private String hostName;
     private LocalDateTime scheduledAt;
     private boolean useAiMinutes;
+    private int participantsCount;
 
     public static MeetingResponse from(Meeting meeting) {
         return MeetingResponse.builder()
@@ -23,6 +24,7 @@ public class MeetingResponse {
                 .hostName(meeting.getHost().getName())
                 .scheduledAt(meeting.getScheduledAt())
                 .useAiMinutes(meeting.isUseAiMinutes())
+                .participantsCount(meeting.getParticipants().size())
                 .build();
     }
 }
