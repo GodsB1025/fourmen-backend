@@ -24,4 +24,11 @@ public class CalendarController {
     public List<TodayEventResponse> getTodayEvents(@AuthenticationPrincipal User user) {
         return calendarService.getTodayEvents(user);
     }
+
+    @GetMapping
+    @ApiResponseMessage("전체 캘린더 일정 조회를 성공하였습니다.")
+    public List<TodayEventResponse> getAllEvents(@AuthenticationPrincipal User user) {
+        return calendarService.getAllEvents(user);
+    }
+
 }

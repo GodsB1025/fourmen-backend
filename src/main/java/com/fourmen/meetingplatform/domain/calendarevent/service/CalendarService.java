@@ -53,4 +53,15 @@ public class CalendarService {
                 .map(TodayEventResponse::from)
                 .collect(Collectors.toList());
     }
+
+    @Transactional(readOnly = true)
+    public List<TodayEventResponse> getAllEvents(User user) {
+        // 1. Repository를 통해 사용자의 모든 일정 조회
+        List<CalendarEvent> allEvents = calendarEventRepository.findByUser(user);
+
+        // 2. DTO로 변환하여 반환 (TodayEventResponse DTO 재사용)
+        return allEvents.stream()
+                .map(TodayEventResponse::from)
+                .collect(Collectors.toList());
+    }
 }

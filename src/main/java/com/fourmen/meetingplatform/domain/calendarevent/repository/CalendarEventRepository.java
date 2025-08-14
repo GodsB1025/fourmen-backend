@@ -10,4 +10,5 @@ import java.util.List;
 public interface CalendarEventRepository extends JpaRepository<CalendarEvent, Long> {
 
     List<CalendarEvent> findByUserAndStartTimeBetween(User user, LocalDateTime start, LocalDateTime end);
+    List<CalendarEvent> findByUser(User user);
 }
