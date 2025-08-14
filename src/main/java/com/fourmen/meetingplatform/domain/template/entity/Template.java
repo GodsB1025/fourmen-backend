@@ -20,8 +20,14 @@ public class Template {
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
 
+    @Column(name = "template_name", nullable = false)
+    private String templateName;
+
     @Column(name = "eformsign_template_id", nullable = false)
     private String eformsignTemplateId;
+
+    @Column(name = "preview_image_url")
+    private String previewImageUrl;
 
     @Column(name = "data_schema", columnDefinition = "json", nullable = false)
     private String dataSchema;
