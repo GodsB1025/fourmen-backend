@@ -1,6 +1,8 @@
 package com.fourmen.meetingplatform.domain.meeting.service;
 
 import com.fourmen.meetingplatform.common.exception.CustomException;
+import com.fourmen.meetingplatform.domain.calendarevent.entity.CalendarEvent;
+import com.fourmen.meetingplatform.domain.calendarevent.repository.CalendarEventRepository;
 import com.fourmen.meetingplatform.domain.calendarevent.service.CalendarService;
 import com.fourmen.meetingplatform.domain.meeting.dto.request.MeetingRequest;
 import com.fourmen.meetingplatform.domain.meeting.dto.response.MeetingInfoForContractResponse;
@@ -21,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -36,6 +39,7 @@ public class MeetingService {
     private final MeetingParticipantRepository meetingParticipantRepository;
     private final MinutesRepository minutesRepository;
     private final CalendarService calendarService;
+    private final CalendarEventRepository calendarEventRepository;
 
     @Transactional
     public MeetingResponse createMeeting(MeetingRequest request, User host) {
@@ -135,6 +139,28 @@ public class MeetingService {
         return minutes.stream()
                 .map(MinuteInfoResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void endMeeting(Long meetingId, User user) {
+        // 1. 회의 존재 여부 확인
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new CustomException("해당 ID의 회의를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+
+        // 2. 요청자가 회의의 호스트인지 확인
+        if (!Objects.equals(meeting.getHost().getId(), user.getId())) {
+            throw new CustomException("회의 호스트만 회의를 종료할 수 있습니다.", HttpStatus.FORBIDDEN);
+        }
+
+        // 3. 회의 상태를 비활성(false)으로 변경
+        meeting.deactivate();
+
+        // 4. 이 회의와 연결된 모든 캘린더 일정을 찾아서 종료 시간 업데이트
+        List<CalendarEvent> relatedEvents = calendarEventRepository.findAllByMeeting_Id(meetingId);
+        LocalDateTime now = LocalDateTime.now();
+        for (CalendarEvent event : relatedEvents) {
+            event.updateEndTime(now);
+        }
     }
 
 }

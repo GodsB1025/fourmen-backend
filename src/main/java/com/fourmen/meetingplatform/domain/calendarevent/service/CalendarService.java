@@ -38,8 +38,7 @@ public class CalendarService {
                     .meeting(meeting)
                     .title(meeting.getTitle())
                     .startTime(meeting.getScheduledAt())
-                    // 회의 종료 시간을 1시간 뒤로 자동 설정합니다.
-                    .endTime(meeting.getScheduledAt().plusHours(1))
+                    .endTime(null)
                     .eventType(EventType.MEETING)
                     .build();
             calendarEventRepository.save(calendarEvent);

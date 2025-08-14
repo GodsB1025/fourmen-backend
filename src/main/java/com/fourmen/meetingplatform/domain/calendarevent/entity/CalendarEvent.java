@@ -73,4 +73,8 @@ public class CalendarEvent {
             this.endTime = endTime;
         }
     }
+
+    public void updateEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
+    }
 }
