@@ -100,11 +100,11 @@ public class MeetingController {
         return meetingRoomService.enterVideoMeeting(meetingId, user);
     }
 
-    @PostMapping("/{meetingId}/deactivate")
-    @ApiResponseMessage("화상회의가 비활성화되었습니다.")
-    public void deactivateVideoMeeting(
+    @PostMapping("/{meetingId}/end")
+    @ApiResponseMessage("회의가 성공적으로 종료되었습니다.")
+    public void endMeeting(
             @PathVariable Long meetingId,
             @AuthenticationPrincipal User user) {
-        meetingRoomService.deactivateVideoMeeting(meetingId, user);
+        meetingService.endMeeting(meetingId, user);
     }
 }
