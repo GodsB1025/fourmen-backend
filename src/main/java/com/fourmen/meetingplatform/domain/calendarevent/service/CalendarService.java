@@ -108,4 +108,22 @@ public class CalendarService {
         // 4. 응답 DTO로 변환하여 반환
         return UpdatePersonalEventResponse.from(event);
     }
+
+    @Transactional
+    public void deletePersonalEvent(Long eventId, User user) {
+        // 1. 일정 조회
+        CalendarEvent event = calendarEventRepository.findById(eventId)
+                .orElseThrow(() -> new CustomException("해당 ID의 일정을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+
+        // 2. 권한 확인 (본인이 생성한 개인 일정만 삭제 가능)
+        if (!Objects.equals(event.getUser().getId(), user.getId())) {
+            throw new CustomException("일정을 삭제할 권한이 없습니다.", HttpStatus.FORBIDDEN);
+        }
+        if (event.getEventType() != EventType.PERSONAL) {
+            throw new CustomException("개인 일정만 삭제할 수 있습니다.", HttpStatus.BAD_REQUEST);
+        }
+
+        // 3. 일정 삭제
+        calendarEventRepository.delete(event);
+    }
 }

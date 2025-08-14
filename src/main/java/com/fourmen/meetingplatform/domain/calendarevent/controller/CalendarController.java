@@ -53,4 +53,12 @@ public class CalendarController {
         return calendarService.updatePersonalEvent(eventId, request, user);
     }
 
+    @DeleteMapping("/{eventId}")
+    @ApiResponseMessage("일정이 성공적으로 삭제되었습니다.")
+    public void deletePersonalEvent(
+            @PathVariable Long eventId,
+            @AuthenticationPrincipal User user) {
+        calendarService.deletePersonalEvent(eventId, user);
+    }
+
 }
