@@ -5,6 +5,7 @@ import com.fourmen.meetingplatform.domain.meeting.dto.request.MeetingParticipati
 import com.fourmen.meetingplatform.domain.meeting.dto.request.MeetingRequest;
 import com.fourmen.meetingplatform.domain.meeting.dto.response.MeetingResponse;
 import com.fourmen.meetingplatform.domain.meeting.service.MeetingService;
+import com.fourmen.meetingplatform.domain.minutes.dto.response.MinuteInfoResponse;
 import com.fourmen.meetingplatform.domain.user.entity.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -54,5 +55,19 @@ public class MeetingController {
             @Valid @RequestBody MeetingParticipationRequest request,
             @AuthenticationPrincipal User user) {
         return meetingService.participateInMeeting(request.getMeetingId(), user);
+    }
+
+    /**
+     * 계약서 작성을 위해 특정 회의에 속한 회의록(자동, 수동) 목록을 조회합니다.
+     * @param meetingId 회의 ID
+     * @param user 현재 인증된 사용자
+     * @return 회의록 목록
+     */
+    @GetMapping("/{meetingId}/minutes-for-contract")
+    @ApiResponseMessage("선택한 회의의 회의록 조회를 성공하였습니다.")
+    public List<MinuteInfoResponse> getMinutesForContract(
+            @PathVariable Long meetingId,
+            @AuthenticationPrincipal User user) {
+        return meetingService.getMinutesForContract(meetingId, user);
     }
 }
