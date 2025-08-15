@@ -47,4 +47,8 @@ public class Minutes {
         this.content = content;
         this.type = type;
     }
+
+    public void updateContent(String newContent) {
+        this.content = newContent;
+    }
 }

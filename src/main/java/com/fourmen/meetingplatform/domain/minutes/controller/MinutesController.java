@@ -3,6 +3,7 @@ package com.fourmen.meetingplatform.domain.minutes.controller;
 import com.fourmen.meetingplatform.common.response.ApiResponseMessage;
 import com.fourmen.meetingplatform.domain.minutes.dto.request.MinuteSaveRequest;
 import com.fourmen.meetingplatform.domain.minutes.dto.response.MinuteSaveResponse;
+import com.fourmen.meetingplatform.domain.minutes.dto.response.MinuteUpdateResponse;
 import com.fourmen.meetingplatform.domain.minutes.service.MinutesService;
 import com.fourmen.meetingplatform.domain.user.entity.User;
 import jakarta.validation.Valid;
@@ -26,5 +27,15 @@ public class MinutesController {
             @Valid @RequestBody MinuteSaveRequest requestDto,
             @AuthenticationPrincipal User user) {
         return minutesService.createManualMinutes(meetingId, requestDto, user);
+    }
+
+    @PatchMapping("/{minuteId}")
+    @ApiResponseMessage("회의록이 성공적으로 수정되었습니다.")
+    public MinuteUpdateResponse updateManualMinutes(
+            @PathVariable Long meetingId,
+            @PathVariable Long minuteId,
+            @Valid @RequestBody MinuteSaveRequest requestDto,
+            @AuthenticationPrincipal User user) {
+        return minutesService.updateManualMinutes(meetingId, minuteId, requestDto, user);
     }
 }
