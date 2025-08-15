@@ -1,7 +1,9 @@
 package com.fourmen.meetingplatform.infra.eformsign;
 
 import com.fourmen.meetingplatform.infra.eformsign.dto.request.EformSignTokenRequest;
+import com.fourmen.meetingplatform.infra.eformsign.dto.response.EformSignSendResponse;
 import com.fourmen.meetingplatform.infra.eformsign.dto.response.EformSignTokenResponse;
+import com.fourmen.meetingplatform.domain.contract.dto.request.ContractSendRequestDto;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,19 +34,27 @@ public class EformSignApiClient {
     @Value("${eformsign.api.signature-token}")
     private String signatureToken;
 
+    @Value("${eformsign.api.url.issue-token}")
+    private String issueTokenUrl;
+
+    @Value("${eformsign.api.url.refresh-token}")
+    private String refreshTokenUrl;
+
+    @Value("${eformsign.api.url.send-document}")
+    private String sendDocumentUrl;
+
     public EformSignApiClient(WebClient.Builder webClientBuilder) {
         this.webClient = webClientBuilder.build();
     }
 
     public EformSignTokenResponse issueInitialTokens() {
 
-        String url = "https://api.eformsign.com/v2.0/api_auth/access_token";
         String timestamp = String.valueOf(Instant.now().toEpochMilli());
 
         EformSignTokenRequest requestBody = new EformSignTokenRequest(timestamp, memberId);
 
         return webClient.post()
-                .uri(url)
+                .uri(issueTokenUrl)
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
                 .header("eformsign_signature", "Bearer " + signatureToken)
@@ -56,12 +66,10 @@ public class EformSignApiClient {
 
     public EformSignTokenResponse refreshTokens(String expiredAccessToken, String refreshToken) {
 
-        String url = "https://kr-api.eformsign.com/v2.0/api_auth/refresh_token";
-
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("refresh_token", refreshToken);
 
-        String finalUrl = UriComponentsBuilder.fromUriString(url)
+        String finalUrl = UriComponentsBuilder.fromUriString(refreshTokenUrl)
                 .queryParams(params)
                 .toUriString();
 
@@ -71,6 +79,25 @@ public class EformSignApiClient {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + expiredAccessToken)
                 .retrieve()
                 .bodyToMono(EformSignTokenResponse.class)
+                .block();
+    }
+
+    public EformSignSendResponse sendDocument(String accessToken, String templateId,
+            ContractSendRequestDto requestBody) {
+
+        String finalUrl = UriComponentsBuilder.fromUriString(sendDocumentUrl)
+                .queryParam("template_id", templateId)
+                .toUriString();
+
+        log.info("eFormSign 문서 발송 요청 URL: {}", finalUrl);
+
+        return webClient.post()
+                .uri(finalUrl)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .body(Mono.just(requestBody), ContractSendRequestDto.class)
+                .retrieve()
+                .bodyToMono(EformSignSendResponse.class)
                 .block();
     }
 }
