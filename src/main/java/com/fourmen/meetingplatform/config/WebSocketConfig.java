@@ -16,7 +16,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(audioStreamHandler, "/ws/audio")
+        registry.addHandler(audioStreamHandler, "/ws/audio/{meetingId}") // 경로 수정
                 .setAllowedOrigins("*");
     }
 }

@@ -2,6 +2,7 @@ package com.fourmen.meetingplatform.domain.minutes.controller;
 
 import com.fourmen.meetingplatform.common.response.ApiResponseMessage;
 import com.fourmen.meetingplatform.domain.minutes.dto.request.MinuteSaveRequest;
+import com.fourmen.meetingplatform.domain.minutes.dto.response.MinuteDetailResponse;
 import com.fourmen.meetingplatform.domain.minutes.dto.response.MinuteSaveResponse;
 import com.fourmen.meetingplatform.domain.minutes.dto.response.MinuteUpdateResponse;
 import com.fourmen.meetingplatform.domain.minutes.service.MinutesService;
@@ -47,5 +48,17 @@ public class MinutesController {
             @Valid @RequestBody MinuteSaveRequest requestDto,
             @AuthenticationPrincipal User user) {
         return minutesService.updateManualMinutes(meetingId, minuteId, requestDto, user);
+    }
+
+    @Operation(summary = "회의록 상세 조회", description = "특정 회의록의 상세 내용을 조회")
+    @Parameter(name = "meetingId", description = "조회할 회의록이 속한 회의의 ID", required = true)
+    @Parameter(name = "minuteId", description = "조회할 회의록의 ID", required = true)
+    @GetMapping("/{minuteId}") // 기존 PatchMapping과 경로가 겹치므로 수정
+    @ApiResponseMessage("회의록 상세 조회를 성공하였습니다.")
+    public MinuteDetailResponse getMinuteDetails(
+            @PathVariable Long meetingId,
+            @PathVariable Long minuteId,
+            @AuthenticationPrincipal User user) {
+        return minutesService.getMinuteDetails(meetingId, minuteId, user);
     }
 }
