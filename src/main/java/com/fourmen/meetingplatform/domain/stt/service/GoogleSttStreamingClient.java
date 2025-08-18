@@ -43,7 +43,7 @@ public class GoogleSttStreamingClient {
         sessionUserMap.put(sessionId, user);
 
         try (InputStream credentialsStream = GoogleSttStreamingClient.class.getClassLoader()
-                .getResourceAsStream("endless-theorem-398903-4589dc3ec95a.json")) {
+                .getResourceAsStream("endless-theorem-398903-734ec30d3fa5.json")) {
             if (credentialsStream == null) {
                 throw new IOException("인증 파일을 찾을 수 없습니다. src/main/resources에 파일이 있는지 확인하세요.");
             }
