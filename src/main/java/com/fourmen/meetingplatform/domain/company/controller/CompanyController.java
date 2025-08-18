@@ -42,7 +42,7 @@ public class CompanyController {
     }
 
     @Operation(summary = "회사 멤버 추가", description = "새로운 멤버를 회사에 추가 (ADMIN 권한 필요)")
-    @PostMapping("/addMembers")
+    @PostMapping("/members")
     @ApiResponseMessage("회사에 새로운 멤버를 추가하였습니다.")
     public MemberResponse addMembers(@AuthenticationPrincipal User user, @Valid @RequestBody AddMemberRequest request) {
 
