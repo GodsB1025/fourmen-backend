@@ -55,7 +55,7 @@ public class VicolloRequest {
             return ViewOptions.builder()
                     .theme(Theme.builder().color("dark").build())
                     .header(Header.defaultHeader())
-                    .sideBar(SideBar.builder().visible(true).build())
+                    .sideBar(SideBar.builder().visible(false).build())
                     .controls(Controls.defaultControls())
                     .build();
         }
@@ -129,27 +129,39 @@ public class VicolloRequest {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Controls {
-        @JsonProperty("TOGGLE_CAMERA") private VisibleItem toggleCamera;
-        @JsonProperty("TOGGLE_MICROPHONE") private VisibleItem toggleMicrophone;
-        @JsonProperty("TOGGLE_SCREEN_SHARE") private VisibleItem toggleScreenShare;
-        @JsonProperty("TOGGLE_BACKGROUND_BLUR") private VisibleItem toggleBackgroundBlur;
-        @JsonProperty("TOGGLE_VIRTUAL_BACKGROUND") private VisibleItem toggleVirtualBackground;
-        @JsonProperty("TOGGLE_LAYOUT") private VisibleItem toggleLayout;
-        @JsonProperty("TOGGLE_FOCUSING_SPEAKER") private VisibleItem toggleFocusingSpeaker;
-        @JsonProperty("COPY_ROOM_UUID") private VisibleItem copyRoomUuid;
-        @JsonProperty("EMOJI_REACTIONS") private VisibleItem emojiReactions;
-        @JsonProperty("HAND_RAISE") private VisibleItem handRaise;
-        @JsonProperty("TOGGLE_WHITE_BOARD") private VisibleItem toggleWhiteBoard;
+        @JsonProperty("TOGGLE_CAMERA")
+        private VisibleItem toggleCamera;
+        @JsonProperty("TOGGLE_MICROPHONE")
+        private VisibleItem toggleMicrophone;
+        @JsonProperty("TOGGLE_SCREEN_SHARE")
+        private VisibleItem toggleScreenShare;
+        @JsonProperty("TOGGLE_BACKGROUND_BLUR")
+        private VisibleItem toggleBackgroundBlur;
+        @JsonProperty("TOGGLE_VIRTUAL_BACKGROUND")
+        private VisibleItem toggleVirtualBackground;
+        @JsonProperty("TOGGLE_LAYOUT")
+        private VisibleItem toggleLayout;
+        @JsonProperty("TOGGLE_FOCUSING_SPEAKER")
+        private VisibleItem toggleFocusingSpeaker;
+        @JsonProperty("COPY_ROOM_UUID")
+        private VisibleItem copyRoomUuid;
+        @JsonProperty("EMOJI_REACTIONS")
+        private VisibleItem emojiReactions;
+        @JsonProperty("HAND_RAISE")
+        private VisibleItem handRaise;
+        @JsonProperty("TOGGLE_WHITE_BOARD")
+        private VisibleItem toggleWhiteBoard;
 
         public static Controls defaultControls() {
             VisibleItem visible = VisibleItem.builder().visible(true).build();
+            VisibleItem invisible = VisibleItem.builder().visible(false).build();
             return Controls.builder()
                     .toggleCamera(visible).toggleMicrophone(visible)
-                    .toggleScreenShare(visible).toggleBackgroundBlur(visible)
-                    .toggleVirtualBackground(visible).toggleLayout(visible)
-                    .toggleFocusingSpeaker(visible).copyRoomUuid(visible)
-                    .emojiReactions(visible).handRaise(visible)
-                    .toggleWhiteBoard(visible)
+                    .toggleScreenShare(invisible).toggleBackgroundBlur(visible)
+                    .toggleVirtualBackground(invisible).toggleLayout(invisible)
+                    .toggleFocusingSpeaker(invisible).copyRoomUuid(invisible)
+                    .emojiReactions(invisible).handRaise(invisible)
+                    .toggleWhiteBoard(invisible)
                     .build();
         }
     }

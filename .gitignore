@@ -4,6 +4,7 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 .env
+endless-theorem-398903-734ec30d3fa5.json
 
 ### STS ###
 .apt_generated
