@@ -46,8 +46,8 @@ public class MeetingService {
     private final MinutesRepository minutesRepository;
     private final CalendarService calendarService;
     private final CalendarEventRepository calendarEventRepository;
-    private final SttRecordRepository sttRecordRepository; // 의존성 추가
-    private final ObjectMapper objectMapper; // 의존성 추가
+    private final SttRecordRepository sttRecordRepository;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public MeetingResponse createMeeting(MeetingRequest request, User host) {
@@ -169,45 +169,51 @@ public class MeetingService {
             event.updateEndTime(now);
         }
 
-        // 4. (핵심 로직) STT 기록을 바탕으로 요약본 회의록 생성
-        generateSummaryMinutes(meeting);
+        // 4. (수정된 로직) STT 기록을 바탕으로 자동 회의록 생성
+        generateAutoMinutes(meeting);
     }
 
-    private void generateSummaryMinutes(Meeting meeting) {
+    /**
+     * STT 기록을 조합하여 요청하신 형식의 자동 회의록을 생성합니다.
+     * @param meeting 회의 엔티티
+     */
+    private void generateAutoMinutes(Meeting meeting) {
         // 1. 해당 회의의 모든 발화 기록을 가져옴
         List<SttRecord> sttRecords = sttRecordRepository.findAllByMeeting_Id(meeting.getId());
 
         if (sttRecords.isEmpty()) {
-            log.info("회의 ID {}에 대한 STT 기록이 없어 요약본을 생성하지 않습니다.", meeting.getId());
+            log.info("회의 ID {}에 대한 STT 기록이 없어 자동 회의록을 생성하지 않습니다.", meeting.getId());
             return;
         }
 
-        // 2. 모든 발화 내용을 하나의 문자열로 합침
-        String fullTranscript = sttRecords.stream()
+        // 2. 모든 발화 내용을 "시간 이름 : 내용" 형식으로 변환하고, 시간순으로 정렬 후 하나의 문자열로 합침
+        String autoMinutesContent = sttRecords.stream()
                 .map(record -> {
                     try {
-                        // JSON을 파싱하여 text 내용만 추출
-                        UtteranceDto utterance = objectMapper.readValue(record.getSegmentData(), UtteranceDto.class);
-                        return utterance.getText();
+                        // JSON을 파싱하여 UtteranceDto 객체로 변환
+                        return objectMapper.readValue(record.getSegmentData(), UtteranceDto.class);
                     } catch (Exception e) {
                         log.error("STT record 파싱 실패 (ID: {})", record.getId(), e);
-                        return "";
+                        return null; // 파싱 실패 시 null 반환
                     }
                 })
-                .collect(Collectors.joining("\n"));
+                .filter(Objects::nonNull) // 파싱 실패한 객체는 제외
+                .sorted((u1, u2) -> u1.getTimestamp().compareTo(u2.getTimestamp())) // timestamp 시간순으로 정렬
+                .map(utterance -> String.format("%s %s : %s",
+                        utterance.getTimestamp(),
+                        utterance.getSpeaker(),
+                        utterance.getText())) // "시간 이름 : 내용" 형식으로 문자열 조합
+                .collect(Collectors.joining("\n")); // 각 라인을 줄바꿈으로 연결
 
-        // TODO: (향후 확장) fullTranscript를 AI 모델에 보내 실제 '요약'을 수행하는 로직 추가 가능
-        String summaryContent = fullTranscript; // 현재는 전체 녹취록을 요약본으로 사용
-
-        // 3. 요약본(SUMMARY) 타입의 회의록 생성
-        Minutes summaryMinutes = Minutes.builder()
+        // 3. 자동(AUTO) 타입의 회의록 생성
+        Minutes autoMinutes = Minutes.builder()
                 .meeting(meeting)
                 .author(meeting.getHost()) // 시스템(AI)이 생성했지만, 호스트 권한으로 생성
-                .content(summaryContent)
-                .type(MinutesType.SUMMARY)
+                .content(autoMinutesContent)
+                .type(MinutesType.AUTO) // 타입을 AUTO로 지정
                 .build();
 
-        minutesRepository.save(summaryMinutes);
-        log.info("회의 ID {}에 대한 요약본 회의록(ID: {})을 성공적으로 생성했습니다.", meeting.getId(), summaryMinutes.getId());
+        minutesRepository.save(autoMinutes);
+        log.info("회의 ID {}에 대한 자동 회의록(ID: {})을 성공적으로 생성했습니다.", meeting.getId(), autoMinutes.getId());
     }
 }
