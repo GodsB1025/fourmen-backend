@@ -1,5 +1,6 @@
 package com.fourmen.meetingplatform.domain.meeting.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fourmen.meetingplatform.common.exception.CustomException;
 import com.fourmen.meetingplatform.domain.calendarevent.entity.CalendarEvent;
 import com.fourmen.meetingplatform.domain.calendarevent.repository.CalendarEventRepository;
@@ -15,10 +16,14 @@ import com.fourmen.meetingplatform.domain.minutes.dto.response.MinuteInfoRespons
 import com.fourmen.meetingplatform.domain.minutes.entity.Minutes;
 import com.fourmen.meetingplatform.domain.minutes.entity.MinutesType;
 import com.fourmen.meetingplatform.domain.minutes.repository.MinutesRepository;
+import com.fourmen.meetingplatform.domain.stt.dto.UtteranceDto;
+import com.fourmen.meetingplatform.domain.stt.entity.SttRecord;
+import com.fourmen.meetingplatform.domain.stt.repository.SttRecordRepository;
 import com.fourmen.meetingplatform.domain.user.entity.Role;
 import com.fourmen.meetingplatform.domain.user.entity.User;
 import com.fourmen.meetingplatform.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +35,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MeetingService {
@@ -40,6 +46,8 @@ public class MeetingService {
     private final MinutesRepository minutesRepository;
     private final CalendarService calendarService;
     private final CalendarEventRepository calendarEventRepository;
+    private final SttRecordRepository sttRecordRepository;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public MeetingResponse createMeeting(MeetingRequest request, User host) {
@@ -134,7 +142,7 @@ public class MeetingService {
         }
 
         List<Minutes> minutes = minutesRepository.findByMeeting_IdAndTypeIn(
-                meetingId, Arrays.asList(MinutesType.AUTO, MinutesType.SELF));
+                meetingId, Arrays.asList(MinutesType.AUTO, MinutesType.SELF, MinutesType.SUMMARY));
 
         return minutes.stream()
                 .map(MinuteInfoResponse::from)
@@ -143,24 +151,69 @@ public class MeetingService {
 
     @Transactional
     public void endMeeting(Long meetingId, User user) {
-        // 1. 회의 존재 여부 확인
+        // 1. 회의 존재 및 호스트 권한 확인
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new CustomException("해당 ID의 회의를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
-        // 2. 요청자가 회의의 호스트인지 확인
         if (!Objects.equals(meeting.getHost().getId(), user.getId())) {
             throw new CustomException("회의 호스트만 회의를 종료할 수 있습니다.", HttpStatus.FORBIDDEN);
         }
 
-        // 3. 회의 상태를 비활성(false)으로 변경
+        // 2. 회의 상태를 비활성으로 변경
         meeting.deactivate();
 
-        // 4. 이 회의와 연결된 모든 캘린더 일정을 찾아서 종료 시간 업데이트
+        // 3. 캘린더 일정 종료 시간 업데이트
         List<CalendarEvent> relatedEvents = calendarEventRepository.findAllByMeeting_Id(meetingId);
         LocalDateTime now = LocalDateTime.now();
         for (CalendarEvent event : relatedEvents) {
             event.updateEndTime(now);
         }
+
+        // 4. (수정된 로직) STT 기록을 바탕으로 자동 회의록 생성
+        generateAutoMinutes(meeting);
     }
 
+    /**
+     * STT 기록을 조합하여 요청하신 마크다운 형식의 자동 회의록을 생성합니다.
+     * @param meeting 회의 엔티티
+     */
+    private void generateAutoMinutes(Meeting meeting) {
+        // 1. 해당 회의의 모든 발화 기록을 가져옴
+        List<SttRecord> sttRecords = sttRecordRepository.findAllByMeeting_Id(meeting.getId());
+
+        if (sttRecords.isEmpty()) {
+            log.info("회의 ID {}에 대한 STT 기록이 없어 자동 회의록을 생성하지 않습니다.", meeting.getId());
+            return;
+        }
+
+        // 2. 모든 발화 내용을 마크다운 형식으로 변환하고, 시간순으로 정렬 후 하나의 문자열로 합침
+        String autoMinutesContent = sttRecords.stream()
+                .map(record -> {
+                    try {
+                        // JSON을 파싱하여 UtteranceDto 객체로 변환
+                        return objectMapper.readValue(record.getSegmentData(), UtteranceDto.class);
+                    } catch (Exception e) {
+                        log.error("STT record 파싱 실패 (ID: {})", record.getId(), e);
+                        return null; // 파싱 실패 시 null 반환
+                    }
+                })
+                .filter(Objects::nonNull) // 파싱 실패한 객체는 제외
+                .sorted((u1, u2) -> u1.getTimestamp().compareTo(u2.getTimestamp())) // timestamp 시간순으로 정렬
+                .map(utterance -> String.format("**%s**\n%s : %s", // (수정된 부분) 마크다운 형식으로 문자열 조합
+                        utterance.getTimestamp(),
+                        utterance.getSpeaker(),
+                        utterance.getText()))
+                .collect(Collectors.joining("\n\n")); // 각 발화 사이에 두 번의 줄바꿈으로 단락 구분
+
+        // 3. 자동(AUTO) 타입의 회의록 생성
+        Minutes autoMinutes = Minutes.builder()
+                .meeting(meeting)
+                .author(meeting.getHost()) // 시스템(AI)이 생성했지만, 호스트 권한으로 생성
+                .content(autoMinutesContent)
+                .type(MinutesType.AUTO) // 타입을 AUTO로 지정
+                .build();
+
+        minutesRepository.save(autoMinutes);
+        log.info("회의 ID {}에 대한 자동 회의록(ID: {})을 성공적으로 생성했습니다.", meeting.getId(), autoMinutes.getId());
+    }
 }
