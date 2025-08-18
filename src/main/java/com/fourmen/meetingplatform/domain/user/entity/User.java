@@ -31,7 +31,7 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column(length = 50, nullable = false)
     private String phone;
 
     @ManyToOne(fetch = FetchType.LAZY)
