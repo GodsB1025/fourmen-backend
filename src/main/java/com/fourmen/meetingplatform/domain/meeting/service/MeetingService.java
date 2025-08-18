@@ -174,7 +174,7 @@ public class MeetingService {
     }
 
     /**
-     * STT 기록을 조합하여 요청하신 형식의 자동 회의록을 생성합니다.
+     * STT 기록을 조합하여 요청하신 마크다운 형식의 자동 회의록을 생성합니다.
      * @param meeting 회의 엔티티
      */
     private void generateAutoMinutes(Meeting meeting) {
@@ -186,7 +186,7 @@ public class MeetingService {
             return;
         }
 
-        // 2. 모든 발화 내용을 "시간 이름 : 내용" 형식으로 변환하고, 시간순으로 정렬 후 하나의 문자열로 합침
+        // 2. 모든 발화 내용을 마크다운 형식으로 변환하고, 시간순으로 정렬 후 하나의 문자열로 합침
         String autoMinutesContent = sttRecords.stream()
                 .map(record -> {
                     try {
@@ -199,11 +199,11 @@ public class MeetingService {
                 })
                 .filter(Objects::nonNull) // 파싱 실패한 객체는 제외
                 .sorted((u1, u2) -> u1.getTimestamp().compareTo(u2.getTimestamp())) // timestamp 시간순으로 정렬
-                .map(utterance -> String.format("%s %s : %s",
+                .map(utterance -> String.format("**%s**\n%s : %s", // (수정된 부분) 마크다운 형식으로 문자열 조합
                         utterance.getTimestamp(),
                         utterance.getSpeaker(),
-                        utterance.getText())) // "시간 이름 : 내용" 형식으로 문자열 조합
-                .collect(Collectors.joining("\n")); // 각 라인을 줄바꿈으로 연결
+                        utterance.getText()))
+                .collect(Collectors.joining("\n\n")); // 각 발화 사이에 두 번의 줄바꿈으로 단락 구분
 
         // 3. 자동(AUTO) 타입의 회의록 생성
         Minutes autoMinutes = Minutes.builder()
