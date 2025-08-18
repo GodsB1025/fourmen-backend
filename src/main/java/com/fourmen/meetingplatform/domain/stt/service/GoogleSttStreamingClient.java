@@ -6,6 +6,7 @@ import com.fourmen.meetingplatform.domain.meeting.repository.MeetingRepository;
 import com.fourmen.meetingplatform.domain.stt.dto.UtteranceDto;
 import com.fourmen.meetingplatform.domain.stt.entity.SttRecord;
 import com.fourmen.meetingplatform.domain.stt.repository.SttRecordRepository;
+import com.fourmen.meetingplatform.domain.user.entity.User;
 import com.google.api.gax.rpc.ClientStream;
 import com.google.api.gax.rpc.ResponseObserver;
 import com.google.api.gax.rpc.StreamController;
@@ -19,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -32,9 +35,12 @@ public class GoogleSttStreamingClient {
 
     private final ConcurrentHashMap<String, ClientStream<StreamingRecognizeRequest>> streams = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Long> sessionMeetingMap = new ConcurrentHashMap<>();
+    // 세션 ID와 사용자 정보를 매핑하기 위한 Map 추가
+    private final ConcurrentHashMap<String, User> sessionUserMap = new ConcurrentHashMap<>();
 
-    public void startSession(String sessionId, Long meetingId) {
+    public void startSession(String sessionId, Long meetingId, User user) {
         sessionMeetingMap.put(sessionId, meetingId);
+        sessionUserMap.put(sessionId, user);
 
         try (InputStream credentialsStream = GoogleSttStreamingClient.class.getClassLoader()
                 .getResourceAsStream("endless-theorem-398903-4589dc3ec95a.json")) {
@@ -59,7 +65,7 @@ public class GoogleSttStreamingClient {
 
             StreamingRecognitionConfig streamingConfig = StreamingRecognitionConfig.newBuilder()
                     .setConfig(recognitionConfig)
-                    .setInterimResults(false)
+                    .setInterimResults(false) // 최종 결과만 받도록 설정
                     .build();
 
             StreamingRecognizeRequest configRequest = StreamingRecognizeRequest.newBuilder()
@@ -110,8 +116,10 @@ public class GoogleSttStreamingClient {
     @Transactional
     public void saveUtterance(String sessionId, String transcript) {
         Long meetingId = sessionMeetingMap.get(sessionId);
-        if (meetingId == null) {
-            log.warn("세션에 해당하는 회의가 없어 발화 내용을 저장할 수 없습니다. (세션 ID: {})", sessionId);
+        User speaker = sessionUserMap.get(sessionId); // 세션에 매핑된 사용자 정보 조회
+
+        if (meetingId == null || speaker == null) {
+            log.warn("세션에 해당하는 회의 또는 사용자가 없어 발화 내용을 저장할 수 없습니다. (세션 ID: {})", sessionId);
             return;
         }
 
@@ -119,8 +127,14 @@ public class GoogleSttStreamingClient {
                 .orElseThrow(() -> new RuntimeException("회의를 찾을 수 없습니다. ID: " + meetingId));
 
         try {
-            // TODO: 실제 화자 인식 및 타임스탬프 로직 구현 필요
-            UtteranceDto utterance = new UtteranceDto("참가자", transcript, "00:00:00");
+            String speakerName = speaker.getName();
+
+            LocalDateTime now = LocalDateTime.now();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+            String timestamp = now.format(formatter);
+
+            // 동적으로 생성된 화자, 시간 정보로 DTO 생성
+            UtteranceDto utterance = new UtteranceDto(speakerName, transcript, timestamp);
             String segmentDataJson = objectMapper.writeValueAsString(utterance);
 
             SttRecord sttRecord = SttRecord.builder()
@@ -158,6 +172,7 @@ public class GoogleSttStreamingClient {
     private void cleanupSession(String sessionId, SpeechClient speechClient) {
         streams.remove(sessionId);
         sessionMeetingMap.remove(sessionId);
+        sessionUserMap.remove(sessionId);
         if (speechClient != null) {
             speechClient.close();
         }

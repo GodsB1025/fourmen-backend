@@ -1,6 +1,7 @@
 package com.fourmen.meetingplatform.domain.stt.handler;
 
 import com.fourmen.meetingplatform.domain.stt.service.GoogleSttStreamingClient;
+import com.fourmen.meetingplatform.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -23,15 +24,23 @@ public class AudioStreamHandler extends AbstractWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         try {
+            User user = (User) session.getAttributes().get("user");
+
+            if (user == null) {
+                log.error("웹소켓 세션에서 사용자 정보를 찾을 수 없습니다. 비인증 연결일 수 있습니다.");
+                session.close(CloseStatus.POLICY_VIOLATION);
+                return;
+            }
+
             UriComponents uriComponents = UriComponentsBuilder.fromUri(session.getUri()).build();
             List<String> pathSegments = uriComponents.getPathSegments();
-            // URI 경로가 /api/ws/audio/{meetingId} 형태라고 가정
             Long meetingId = Long.parseLong(pathSegments.get(pathSegments.size() - 1));
 
-            log.info("WebSocket 연결 시작. 세션 ID: {}, 회의 ID: {}", session.getId(), meetingId);
-            googleSttClient.startSession(session.getId(), meetingId);
+            log.info("WebSocket 연결 시작. 세션 ID: {}, 회의 ID: {}, 사용자: {}", session.getId(), meetingId, user.getName());
+
+            googleSttClient.startSession(session.getId(), meetingId, user);
         } catch (Exception e) {
-            log.error("WebSocket 연결 처리 중 오류 발생: {}", e.getMessage());
+            log.error("WebSocket 연결 처리 중 오류 발생: {}", e.getMessage(), e);
         }
     }
 
