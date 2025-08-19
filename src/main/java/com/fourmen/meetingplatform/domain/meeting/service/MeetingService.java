@@ -22,7 +22,8 @@ import com.fourmen.meetingplatform.domain.stt.repository.SttRecordRepository;
 import com.fourmen.meetingplatform.domain.user.entity.Role;
 import com.fourmen.meetingplatform.domain.user.entity.User;
 import com.fourmen.meetingplatform.domain.user.repository.UserRepository;
-import com.fourmen.meetingplatform.infra.gpt.GptService; // GptService import 추가
+import com.fourmen.meetingplatform.infra.gpt.service.GptService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
