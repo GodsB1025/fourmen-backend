@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>실시간 STT 스트리밍 테스트 (CSRF 포함)</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #f4f7f9;
+        }
+        .container {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            flex-grow: 1;
+            padding: 12px 18px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        #loginButton { background-color: #007bff; }
+        #loginButton:hover { background-color: #0056b3; }
+        #startButton { background-color: #28a745; }
+        #startButton:disabled { background-color: #a5d6a7; cursor: not-allowed; }
+        #stopButton { background-color: #dc3545; }
+        #stopButton:disabled { background-color: #f8d7da; cursor: not-allowed; }
+
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+        }
+        #error {
+            color: #dc3545;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        .info {
+            font-size: 12px; color: #666; background-color: #f8f9fa; padding: 10px; border-radius: 4px; margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>STT 스트리밍 테스트 (CSRF) 🎙️</h1>
+    <div class="info">
+        <strong>⚠️ 테스트 방법:</strong><br>
+        1. 백엔드에 실제 사용자로 로그인합니다.<br>
+        2. 브라우저 개발자 도구(F12) > Application > Cookies 에서 `accessToken`과 `XSRF-TOKEN` 값을 복사합니다.<br>
+        3. 아래 입력란에 붙여넣고 '테스트용 쿠키 설정' 버튼을 누릅니다.<br>
+        4. '녹음 시작' 버튼을 눌러 테스트를 진행합니다.
+    </div>
+
+    <div class="form-group">
+        <label for="accessTokenInput">Access Token</label>
+        <input type="text" id="accessTokenInput" placeholder="로그인 후 발급받은 accessToken 값을 입력하세요">
+    </div>
+    <div class="form-group">
+        <label for="xsrfTokenInput">XSRF-TOKEN (CSRF 토큰)</label>
+        <input type="text" id="xsrfTokenInput" placeholder="로그인 후 발급받은 XSRF-TOKEN 값을 입력하세요">
+    </div>
+    <button id="loginButton" style="width: 100%; margin-bottom: 20px;">테스트용 쿠키 설정 (필수)</button>
+
+    <div class="button-group">
+        <button id="startButton">녹음 시작 (회의 ID: 1)</button>
+        <button id="stopButton" disabled>녹음 중지</button>
+    </div>
+
+    <div id="status">상태: 대기 중</div>
+    <div id="error"></div>
+</div>
+
+<script>
+    // UI 요소 가져오기
+    const accessTokenInput = document.getElementById('accessTokenInput');
+    const xsrfTokenInput = document.getElementById('xsrfTokenInput');
+    const loginButton = document.getElementById('loginButton');
+    const startButton = document.getElementById('startButton');
+    const stopButton = document.getElementById('stopButton');
+    const statusDiv = document.getElementById('status');
+    const errorDiv = document.getElementById('error');
+
+    // 전역 변수 선언
+    let socket = null;
+    let mediaRecorder = null;
+    let audioStream = null;
+    const MEETING_ID = 1; // 회의 ID를 1로 고정
+
+    // '테스트용 쿠키 설정' 버튼 이벤트 리스너
+    loginButton.addEventListener('click', () => {
+        const accessToken = accessTokenInput.value.trim();
+        const xsrfToken = xsrfTokenInput.value.trim();
+
+        if (!accessToken || !xsrfToken) {
+            alert('Access Token과 XSRF-TOKEN을 모두 입력해주세요.');
+            return;
+        }
+
+        document.cookie = `accessToken=${accessToken}; path=/; max-age=3600; SameSite=Lax`;
+        document.cookie = `XSRF-TOKEN=${xsrfToken}; path=/; max-age=3600; SameSite=Lax`;
+
+        alert('테스트용 쿠키가 설정되었습니다. 이제 녹음을 시작할 수 있습니다.');
+        console.log('Cookies set:', document.cookie);
+    });
+
+    // '녹음 시작' 버튼 이벤트 리스너
+    startButton.addEventListener('click', () => {
+        // 상태 초기화
+        errorDiv.textContent = '';
+        updateStatus('연결 중...', '#ffc107');
+        startButton.disabled = true;
+
+        const wsUrl = `ws://localhost:8081/api/ws/audio/${MEETING_ID}`;
+
+        socket = new WebSocket(wsUrl);
+
+        socket.onopen = async () => {
+            updateStatus('WebSocket 연결 성공. 마이크 접근 중...', '#007bff');
+            try {
+                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                const options = { mimeType: 'audio/webm;codecs=opus' };
+                mediaRecorder = new MediaRecorder(audioStream, options);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0 && socket?.readyState === WebSocket.OPEN) {
+                        socket.send(event.data);
+                    }
+                };
+
+                mediaRecorder.onstart = () => {
+                    updateStatus('녹음 중...', '#28a745');
+                    stopButton.disabled = false;
+                };
+
+                // 1초(1000ms) 대신 0.4초(400ms) 간격으로 데이터를 분할하여 전송합니다.
+                // 이렇게 하면 각 데이터 조각의 크기가 서버의 버퍼 한도(8KB) 미만으로 유지됩니다.
+                mediaRecorder.start(400);
+
+            } catch (err) {
+                console.error('마이크 접근 또는 녹음 시작 오류:', err);
+                displayError('마이크에 접근할 수 없습니다. 권한을 확인해주세요.');
+                if (socket) socket.close();
+                cleanUp();
+            }
+        };
+
+        socket.onerror = (event) => {
+            console.error('WebSocket 오류:', event);
+            displayError('웹소켓 연결에 실패했습니다. 서버 상태나 설정한 쿠키 값이 올바른지 확인해주세요.');
+            cleanUp();
+        };
+
+        socket.onclose = (event) => {
+            console.log(`WebSocket 연결 종료: 코드=${event.code}, 이유=${event.reason || '없음'}`);
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                cleanUp();
+            }
+        };
+    });
+
+    // '녹음 중지' 버튼 이벤트 리스너
+    stopButton.addEventListener('click', cleanUp);
+
+    // 모든 리소스 정리 및 상태 초기화 함수
+    function cleanUp() {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+        }
+        if (audioStream) {
+            audioStream.getTracks().forEach(track => track.stop());
+        }
+        if (socket && socket.readyState < WebSocket.CLOSING) {
+            socket.close();
+        }
+
+        updateStatus('대기 중', '#6c757d');
+        startButton.disabled = false;
+        stopButton.disabled = true;
+
+        mediaRecorder = null;
+        audioStream = null;
+        socket = null;
+    }
+
+    // 상태 메시지 업데이트 함수
+    function updateStatus(message, color) {
+        statusDiv.textContent = `상태: ${message}`;
+        statusDiv.style.color = color;
+    }
+
+    // 에러 메시지 표시 함수
+    function displayError(message) {
+        errorDiv.textContent = `에러: ${message}`;
+        updateStatus('오류 발생', '#dc3545');
+    }
+</script>
+
+</body>
+</html>
