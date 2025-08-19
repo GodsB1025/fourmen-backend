@@ -6,10 +6,8 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum ContractStatus {
-    DRAFT("임시저장"),
     SENT("발송완료"),
-    COMPLETED("서명완료"),
-    REJECTED("거절");
+    COMPLETED("서명완료");
 
     private final String description;
 }

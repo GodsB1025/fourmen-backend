@@ -44,18 +44,22 @@ public class Contract {
     @Column(nullable = false)
     private ContractStatus status;
 
+    @Column(name = "completed_pdf_url")
+    private String completedPdfUrl;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Builder
     public Contract(Minutes minutes, Template template, User sender, String eformsignDocumentId, String title,
-            ContractStatus status) {
+            ContractStatus status, String completedPdfUrl) {
         this.minutes = minutes;
         this.template = template;
         this.sender = sender;
         this.eformsignDocumentId = eformsignDocumentId;
         this.title = title;
         this.status = status;
+        this.completedPdfUrl = completedPdfUrl;
     }
 }

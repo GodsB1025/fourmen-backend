@@ -12,4 +12,5 @@ import lombok.NoArgsConstructor;
 public class ContractInfoDto {
     private Long contractId;
     private String title;
+    private String completedPdfUrl;
 }
