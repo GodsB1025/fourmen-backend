@@ -56,6 +56,7 @@ public class DocumentService {
             MinutesType minuteType = minuteTypeStr != null ? MinutesType.valueOf(minuteTypeStr) : null;
             Long contractId = row[5] != null ? ((Number) row[5]).longValue() : null;
             String contractTitle = (String) row[6];
+            String completedPdfUrl = (String) row[7];
 
             MeetingInfoDto meetingInfo = meetingsByDate
                     .computeIfAbsent(meetingDate, k -> new LinkedHashMap<>())
@@ -83,6 +84,7 @@ public class DocumentService {
                     minuteInfo.getContracts().add(ContractInfoDto.builder()
                             .contractId(contractId)
                             .title(contractTitle)
+                            .completedPdfUrl(completedPdfUrl)
                             .build());
                 }
             }
@@ -101,6 +103,7 @@ public class DocumentService {
                         .contractId(((Number) row[0]).longValue())
                         .title((String) row[1])
                         .createdAt(((Timestamp) row[2]).toLocalDateTime())
+                        .completedPdfUrl((String) row[3])
                         .build())
                 .collect(Collectors.toList());
 
