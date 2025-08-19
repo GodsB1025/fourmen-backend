@@ -15,4 +15,5 @@ public class StandaloneContractDto {
     private Long contractId;
     private String title;
     private LocalDateTime createdAt;
+    private String completedPdfUrl;
 }

@@ -59,6 +59,7 @@ public class ContractService {
                 .eformsignDocumentId(eformsignDocumentId)
                 .title(requestDto.getDocument().getDocumentName())
                 .status(ContractStatus.SENT)
+                .completedPdfUrl(null)
                 .build();
 
         contractRepository.save(contract);
