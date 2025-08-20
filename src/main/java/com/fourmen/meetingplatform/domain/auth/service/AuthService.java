@@ -41,11 +41,11 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final CompanyRepository companyRepository;
     private final VicolloClient vicolloClient;
-    private final RedisService redisService; // RedisService 의존성 주입
+    private final RedisService redisService;
 
     @Transactional
     public SignUpResponse signUp(SignUpRequest signUpRequest) {
-        // 1. 이메일 인증 여부 확인
+
         String isVerified = redisService.getData("VERIFIED:" + signUpRequest.getEmail());
         if (isVerified == null || !isVerified.equals("true")) {
             throw new CustomException("이메일 인증이 필요합니다.", HttpStatus.BAD_REQUEST);
@@ -80,7 +80,6 @@ public class AuthService {
         vicolloClient.createOrUpdateMember(new VicolloRequest.CreateMember(user.getId().toString(), user.getName(), ""))
                 .block();
 
-        // 2. 회원가입 성공 후 인증 완료 데이터 삭제
         redisService.deleteData("VERIFIED:" + signUpRequest.getEmail());
 
         return SignUpResponse.from(savedUser);

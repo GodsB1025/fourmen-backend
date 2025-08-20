@@ -20,13 +20,11 @@ public class EmailService {
     private final SpringTemplateEngine templateEngine;
     private final RedisService redisService;
 
-    // 6자리 인증 코드 생성
     public String createAuthCode() {
         Random random = new Random();
         return String.valueOf(100000 + random.nextInt(900000)); // 100000 ~ 999999
     }
 
-    // 이메일 전송
     public void sendEmail(String toEmail) {
         String authCode = createAuthCode();
         String title = "Meeting Platform 회원가입 인증 이메일 입니다.";
@@ -40,12 +38,10 @@ public class EmailService {
             throw new CustomException("이메일 전송에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        // 5분간 유효한 인증 코드를 Redis에 저장
         redisService.setData("AUTH:" + toEmail, authCode, 1000 * 60 * 5);
         javaMailSender.send(message);
     }
 
-    // Thymeleaf 컨텍스트 설정
     private String setContext(String code) {
         Context context = new Context();
         context.setVariable("code", code);

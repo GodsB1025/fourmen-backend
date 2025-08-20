@@ -34,7 +34,6 @@ public class VicolloRequest {
 
         public void setScheduledAt(LocalDateTime dateTime) {
             if (dateTime != null) {
-                // Vicollo API는 'Z' (UTC)를 명시적으로 요구하므로 ISO_INSTANT 사용
                 this.scheduledAt = dateTime.toInstant(ZoneOffset.UTC).toString();
             }
         }
@@ -93,7 +92,7 @@ public class VicolloRequest {
 
     @Getter
     @Setter
-    @SuperBuilder // 부모 클래스에는 @SuperBuilder
+    @SuperBuilder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class VisibleItem {
@@ -102,7 +101,7 @@ public class VicolloRequest {
 
     @Getter
     @Setter
-    @SuperBuilder // 수정된 부분: @Builder -> @SuperBuilder
+    @SuperBuilder
     @NoArgsConstructor
     public static class Logo extends VisibleItem {
         private String url;
@@ -110,7 +109,7 @@ public class VicolloRequest {
 
     @Getter
     @Setter
-    @SuperBuilder // 수정된 부분: @Builder -> @SuperBuilder
+    @SuperBuilder
     @NoArgsConstructor
     public static class Leave extends VisibleItem {
         private String url;
