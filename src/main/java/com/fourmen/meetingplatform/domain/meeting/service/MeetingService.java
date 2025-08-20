@@ -8,6 +8,7 @@ import com.fourmen.meetingplatform.domain.calendarevent.service.CalendarService;
 import com.fourmen.meetingplatform.domain.meeting.dto.request.MeetingRequest;
 import com.fourmen.meetingplatform.domain.meeting.dto.response.MeetingInfoForContractResponse;
 import com.fourmen.meetingplatform.domain.meeting.dto.response.MeetingResponse;
+import com.fourmen.meetingplatform.domain.meeting.dto.response.VideoMeetingUrlResponse;
 import com.fourmen.meetingplatform.domain.meeting.entity.Meeting;
 import com.fourmen.meetingplatform.domain.meeting.entity.MeetingParticipant;
 import com.fourmen.meetingplatform.domain.meeting.repository.MeetingParticipantRepository;
@@ -51,7 +52,8 @@ public class MeetingService {
     private final CalendarEventRepository calendarEventRepository;
     private final SttRecordRepository sttRecordRepository;
     private final ObjectMapper objectMapper;
-    private final GptService gptService; // GptService 의존성 주입 추가
+    private final GptService gptService;
+    private final MeetingRoomService meetingRoomService;
 
     @Transactional
     public MeetingResponse createMeeting(MeetingRequest request, User host) {
@@ -234,5 +236,30 @@ public class MeetingService {
                     return Mono.empty();
                 })
                 .subscribe(); // 비동기 스트림 실행
+    }
+
+    @Transactional
+    public VideoMeetingUrlResponse inviteGuest(Long meetingId, User user) {
+        // 1. 회의 존재 및 호스트 권한 확인
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new CustomException("해당 ID의 회의를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+
+        // 일단은 호스트가 아니더라도 참여자면 누구나 초대 링크를 생성할 수 있도록 합니다.
+        boolean isParticipant = meetingParticipantRepository.existsByMeeting_IdAndUser_Id(meetingId, user.getId());
+        if (!isParticipant) {
+            throw new CustomException("회의 참여자만 외부 인력을 초대할 수 있습니다.", HttpStatus.FORBIDDEN);
+        }
+
+        // 2. "guest" 계정 정보 조회
+        User guestUser = userRepository.findByEmail("wprkf1005@gmail.com")
+                .orElseThrow(() -> new CustomException("게스트 계정을 찾을 수 없습니다.", HttpStatus.INTERNAL_SERVER_ERROR));
+
+        // 3. 게스트를 회의 참여자로 추가 (이미 추가되어 있다면 중복 방지)
+        if (!meetingParticipantRepository.existsByMeeting_IdAndUser_Id(meetingId, guestUser.getId())) {
+            meetingParticipantRepository.save(new MeetingParticipant(meeting, guestUser));
+        }
+
+        // 4. 게스트용 화상회의 참가 URL 생성 (MeetingRoomService의 로직 재활용)
+        return meetingRoomService.enterVideoMeeting(meetingId, guestUser);
     }
 }
