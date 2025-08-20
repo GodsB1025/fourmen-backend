@@ -22,7 +22,7 @@ public class Meeting {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "host_id", nullable = false) // 수정된 부분
+    @JoinColumn(name = "host_id", nullable = false)
     private User host;
 
     @Column(name = "room_id")

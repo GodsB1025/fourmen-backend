@@ -24,7 +24,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(audioStreamHandler, "/ws/audio/{meetingId}")
-                .addInterceptors(handshakeInterceptor()) // 생성한 인터셉터를 추가
+                .addInterceptors(handshakeInterceptor())
                 .setAllowedOrigins("*");
     }
 }

@@ -35,7 +35,6 @@ public class GoogleSttStreamingClient {
 
     private final ConcurrentHashMap<String, ClientStream<StreamingRecognizeRequest>> streams = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Long> sessionMeetingMap = new ConcurrentHashMap<>();
-    // 세션 ID와 사용자 정보를 매핑하기 위한 Map 추가
     private final ConcurrentHashMap<String, User> sessionUserMap = new ConcurrentHashMap<>();
 
     public void startSession(String sessionId, Long meetingId, User user) {
@@ -53,8 +52,10 @@ public class GoogleSttStreamingClient {
                     .build();
             SpeechClient speechClient = SpeechClient.create(speechSettings);
 
-            ResponseObserver<StreamingRecognizeResponse> responseObserver = createResponseObserver(sessionId, speechClient);
-            ClientStream<StreamingRecognizeRequest> clientStream = speechClient.streamingRecognizeCallable().splitCall(responseObserver);
+            ResponseObserver<StreamingRecognizeResponse> responseObserver = createResponseObserver(sessionId,
+                    speechClient);
+            ClientStream<StreamingRecognizeRequest> clientStream = speechClient.streamingRecognizeCallable()
+                    .splitCall(responseObserver);
 
             RecognitionConfig recognitionConfig = RecognitionConfig.newBuilder()
                     .setEncoding(RecognitionConfig.AudioEncoding.WEBM_OPUS)
@@ -65,7 +66,7 @@ public class GoogleSttStreamingClient {
 
             StreamingRecognitionConfig streamingConfig = StreamingRecognitionConfig.newBuilder()
                     .setConfig(recognitionConfig)
-                    .setInterimResults(false) // 최종 결과만 받도록 설정
+                    .setInterimResults(false)
                     .build();
 
             StreamingRecognizeRequest configRequest = StreamingRecognizeRequest.newBuilder()
@@ -80,7 +81,8 @@ public class GoogleSttStreamingClient {
         }
     }
 
-    private ResponseObserver<StreamingRecognizeResponse> createResponseObserver(String sessionId, SpeechClient speechClient) {
+    private ResponseObserver<StreamingRecognizeResponse> createResponseObserver(String sessionId,
+            SpeechClient speechClient) {
         return new ResponseObserver<>() {
             @Override
             public void onStart(StreamController controller) {
@@ -116,7 +118,7 @@ public class GoogleSttStreamingClient {
     @Transactional
     public void saveUtterance(String sessionId, String transcript) {
         Long meetingId = sessionMeetingMap.get(sessionId);
-        User speaker = sessionUserMap.get(sessionId); // 세션에 매핑된 사용자 정보 조회
+        User speaker = sessionUserMap.get(sessionId);
 
         if (meetingId == null || speaker == null) {
             log.warn("세션에 해당하는 회의 또는 사용자가 없어 발화 내용을 저장할 수 없습니다. (세션 ID: {})", sessionId);
@@ -133,7 +135,6 @@ public class GoogleSttStreamingClient {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
             String timestamp = now.format(formatter);
 
-            // 동적으로 생성된 화자, 시간 정보로 DTO 생성
             UtteranceDto utterance = new UtteranceDto(speakerName, transcript, timestamp);
             String segmentDataJson = objectMapper.writeValueAsString(utterance);
 
