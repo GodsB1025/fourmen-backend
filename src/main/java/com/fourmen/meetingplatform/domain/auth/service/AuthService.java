@@ -102,8 +102,8 @@ public class AuthService {
         user.updateRefreshToken(refreshToken);
 
         addTokenToCookie(response, "accessToken", accessToken, 60 * 60, true);
-        addTokenToCookie(response, "refreshToken", refreshToken, 60 * 60 * 24 * 7, true);
-        addTokenToCookie(response, "XSRF-TOKEN", csrfToken, 60 * 60, false);
+        addTokenToCookie(response, "refreshToken", refreshToken, 60 * 60, true);
+        addTokenToCookie(response, "XSRF-TOKEN", csrfToken, 60 * 60 * 24 * 7, false);
 
         return LoginResponse.from(user);
     }
@@ -128,7 +128,7 @@ public class AuthService {
         User user = userRepository.findByRefreshToken(oldRefreshToken)
                 .orElseThrow(() -> new IllegalArgumentException("Refresh Token에 해당하는 사용자가 없습니다."));
 
-        Authentication authentication = jwtTokenProvider.getAuthentication(oldRefreshToken);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(user, "", user.getAuthorities());
         String newCsrfToken = UUID.randomUUID().toString();
         String newAccessToken = jwtTokenProvider.createAccessToken(authentication, newCsrfToken);
         String newRefreshToken = jwtTokenProvider.createRefreshToken(authentication);
@@ -136,8 +136,8 @@ public class AuthService {
         user.updateRefreshToken(newRefreshToken);
 
         addTokenToCookie(response, "accessToken", newAccessToken, 60 * 60, true);
-        addTokenToCookie(response, "refreshToken", newRefreshToken, 60 * 60 * 24 * 7, true);
-        addTokenToCookie(response, "XSRF-TOKEN", newCsrfToken, 60 * 60, false);
+        addTokenToCookie(response, "refreshToken", newRefreshToken, 60 * 60, true);
+        addTokenToCookie(response, "XSRF-TOKEN", newCsrfToken, 60 * 60 * 24 * 7, false);
     }
 
     @Transactional

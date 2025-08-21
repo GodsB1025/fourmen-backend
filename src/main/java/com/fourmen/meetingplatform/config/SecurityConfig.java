@@ -3,6 +3,8 @@ package com.fourmen.meetingplatform.config;
 import com.fourmen.meetingplatform.config.csrf.CsrfProtectionFilter;
 import com.fourmen.meetingplatform.config.jwt.JwtAuthenticationFilter;
 import com.fourmen.meetingplatform.config.jwt.JwtTokenProvider;
+
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,6 +33,7 @@ public class SecurityConfig {
     private static final String[] PERMIT_URL_ARRAY = {
             "/",
             "/auth/**",
+            "/auth/refresh",
             "/swagger-ui.html",
             "/swagger-ui/**",
             "/v3/api-docs/**",
@@ -62,7 +65,14 @@ public class SecurityConfig {
                         .requestMatchers(PERMIT_URL_ARRAY).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(csrfProtectionFilter, JwtAuthenticationFilter.class);
+                .addFilterAfter(csrfProtectionFilter, JwtAuthenticationFilter.class)
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "인증이 필요합니다.");
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "접근 권한이 없습니다.");
+                        }));
 
         return http.build();
     }
