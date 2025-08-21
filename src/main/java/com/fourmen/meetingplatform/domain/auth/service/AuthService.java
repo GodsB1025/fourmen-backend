@@ -102,7 +102,7 @@ public class AuthService {
         user.updateRefreshToken(refreshToken);
 
         addTokenToCookie(response, "accessToken", accessToken, 60 * 60, true);
-        addTokenToCookie(response, "refreshToken", refreshToken, 60 * 60, true);
+        addTokenToCookie(response, "refreshToken", refreshToken, 60 * 60 * 24 * 7, true);
         addTokenToCookie(response, "XSRF-TOKEN", csrfToken, 60 * 60 * 24 * 7, false);
 
         return LoginResponse.from(user);
@@ -136,7 +136,7 @@ public class AuthService {
         user.updateRefreshToken(newRefreshToken);
 
         addTokenToCookie(response, "accessToken", newAccessToken, 60 * 60, true);
-        addTokenToCookie(response, "refreshToken", newRefreshToken, 60 * 60, true);
+        addTokenToCookie(response, "refreshToken", newRefreshToken, 60 * 60 * 24 * 7, true);
         addTokenToCookie(response, "XSRF-TOKEN", newCsrfToken, 60 * 60 * 24 * 7, false);
     }
 
