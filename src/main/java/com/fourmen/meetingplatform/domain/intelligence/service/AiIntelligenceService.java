@@ -2,7 +2,9 @@ package com.fourmen.meetingplatform.domain.intelligence.service;
 
 import com.fourmen.meetingplatform.domain.intelligence.entity.MeetingIntelligence;
 import com.fourmen.meetingplatform.domain.intelligence.repository.MeetingIntelligenceRepository;
+import com.fourmen.meetingplatform.domain.meeting.repository.MeetingParticipantRepository;
 import com.fourmen.meetingplatform.domain.minutes.entity.Minutes;
+import com.fourmen.meetingplatform.domain.user.entity.User;
 import com.theokanning.openai.completion.chat.ChatCompletionRequest;
 import com.theokanning.openai.completion.chat.ChatMessage;
 import com.theokanning.openai.embedding.EmbeddingRequest;
@@ -24,29 +26,29 @@ import java.util.stream.Collectors;
 @Service
 public class AiIntelligenceService {
 
-    // ================== [수정 포인트 1] ==================
-    // 말씀하신 512 차원을 상수로 정의합니다.
     private static final int PINECONE_INDEX_DIMENSION = 1536;
 
     private final OpenAiService openAiService;
     private final WebClient pineconeWebClient;
     private final MeetingIntelligenceRepository intelligenceRepository;
+    private final MeetingParticipantRepository meetingParticipantRepository;
 
     public AiIntelligenceService(
             @Value("${openai.api.key}") String openaiApiKey,
             @Value("${pinecone.api.key}") String pineconeApiKey,
             @Value("${pinecone.index.host}") String pineconeIndexHost,
             MeetingIntelligenceRepository intelligenceRepository,
-            WebClient.Builder webClientBuilder) {
+            WebClient.Builder webClientBuilder,
+            MeetingParticipantRepository meetingParticipantRepository) {
 
         this.openAiService = new OpenAiService(openaiApiKey, Duration.ofSeconds(60));
         this.intelligenceRepository = intelligenceRepository;
-
         this.pineconeWebClient = webClientBuilder
                 .baseUrl("https://" + pineconeIndexHost)
                 .defaultHeader("Api-Key", pineconeApiKey)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .build();
+        this.meetingParticipantRepository = meetingParticipantRepository;
     }
 
     @Transactional
@@ -63,23 +65,22 @@ public class AiIntelligenceService {
             try {
                 List<Float> vector = createEmbedding(chunk);
 
-                // ================== [수정 포인트 2] ==================
-                // 벡터 차원 검증 로직 추가 (400 Bad Request 방지)
                 if (vector.size() != PINECONE_INDEX_DIMENSION) {
-                    System.out.println(vector.size());
                     log.error("벡터 차원 불일치! 생성된 벡터 차원: {}, Pinecone 인덱스 필요 차원: {}. (회의록 ID: {})",
                             vector.size(), PINECONE_INDEX_DIMENSION, minutes.getId());
-                    continue; // 이 청크는 건너뛰고 다음으로 진행
+                    continue;
                 }
 
                 String vectorId = UUID.randomUUID().toString();
 
-                Map<String, Object> upsertData = Map.of(
-                        "vectors", List.of(Map.of(
-                                "id", vectorId,
-                                "values", vector
-                        ))
-                );
+                Map<String, Object> metadata = Map.of("meetingId", minutes.getMeeting().getId().toString());
+
+                Map<String, Object> vectorData = new HashMap<>();
+                vectorData.put("id", vectorId);
+                vectorData.put("values", vector);
+                vectorData.put("metadata", metadata);
+
+                Map<String, Object> upsertData = Map.of("vectors", List.of(vectorData));
 
                 String response = pineconeWebClient.post()
                         .uri("/vectors/upsert")
@@ -100,7 +101,6 @@ public class AiIntelligenceService {
                 log.info("회의록 ID {}의 내용을 벡터화하여 저장했습니다. (Vector ID: {})", minutes.getId(), vectorId);
 
             } catch (WebClientResponseException e) {
-                // Pinecone API 에러 발생 시 응답 본문을 로그로 남겨 정확한 원인 파악
                 log.error("Pinecone 벡터화 실패 (회의록 ID: {}): HTTP Status {}, Response Body: {}",
                         minutes.getId(), e.getStatusCode(), e.getResponseBodyAsString(), e);
             } catch (Exception e) {
@@ -110,15 +110,27 @@ public class AiIntelligenceService {
     }
 
     @Transactional(readOnly = true)
-    public String searchAndAnswer(String userQuery) {
+    public String searchAndAnswer(String userQuery, User user) {
         try {
             List<Float> queryVector = createEmbedding(userQuery);
+
+            List<Long> accessibleMeetingIds = meetingParticipantRepository.findMeetingIdsByUserId(user.getId());
+
+            if (accessibleMeetingIds.isEmpty()) {
+                return "참여하신 회의가 없어 검색할 수 없습니다.";
+            }
+            List<String> meetingIdStrings = accessibleMeetingIds.stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.toList());
+
+            Map<String, Object> filter = Map.of("meetingId", Map.of("$in", meetingIdStrings));
 
             Map<String, Object> queryData = Map.of(
                     "vector", queryVector,
                     "topK", 3,
                     "includeMetadata", false,
-                    "includeValues", false
+                    "includeValues", false,
+                    "filter", filter // 필터 조건 추가
             );
 
             @SuppressWarnings("unchecked")
@@ -178,9 +190,6 @@ public class AiIntelligenceService {
     }
 
     private List<Float> createEmbedding(String text) {
-        // 주의: text-embedding-3-small 모델은 1536차원 벡터를 반환합니다.
-        // 만약 512 차원 벡터가 필요하다면, 그에 맞는 다른 임베딩 모델을 사용하셔야 합니다.
-        // 예시: model("다른-512차원-모델명")
         EmbeddingRequest embeddingRequest = EmbeddingRequest.builder()
                 .model("text-embedding-3-small")
                 .input(Collections.singletonList(text))
