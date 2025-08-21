@@ -45,6 +45,14 @@ public class CsrfProtectionFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain) throws ServletException, IOException {
 
+        Object isAuthenticatedAttr = request.getAttribute("isAuthenticated");
+        boolean isAuthenticated = isAuthenticatedAttr instanceof Boolean && (Boolean) isAuthenticatedAttr;
+
+        if (!isAuthenticated) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         final String csrfTokenFromHeader = request.getHeader(CSRF_HEADER_NAME);
 
         String accessToken = null;
@@ -59,7 +67,7 @@ public class CsrfProtectionFilter extends OncePerRequestFilter {
         }
 
         if (csrfTokenFromHeader == null || accessToken == null) {
-            throw new AccessDeniedException("CSRF 토큰이 없습니다.");
+            throw new AccessDeniedException("CSRF 토큰 또는 Access Token이 없습니다.");
         }
 
         final String csrfTokenFromJwt = jwtTokenProvider.getCsrfToken(accessToken);

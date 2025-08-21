@@ -14,15 +14,15 @@ import lombok.NoArgsConstructor;
 public class MeetingIntelligence {
 
     @Id
-    private String id; // Pinecone 벡터 ID와 동일하게 사용
+    private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "minutes_id", nullable = false)
     private Minutes minutes;
 
     @Lob
-    @Column(nullable = false)
-    private String textChunk; // 벡터로 변환된 원본 텍스트 조각
+    @Column(nullable = false, columnDefinition = "LONGTEXT")
+    private String textChunk;
 
     @Builder
     public MeetingIntelligence(String id, Minutes minutes, String textChunk) {
