@@ -4,8 +4,10 @@ import com.fourmen.meetingplatform.common.response.ApiResponseMessage;
 import com.fourmen.meetingplatform.domain.intelligence.dto.SearchRequest;
 import com.fourmen.meetingplatform.domain.intelligence.dto.SearchResponse;
 import com.fourmen.meetingplatform.domain.intelligence.service.AiIntelligenceService;
+import com.fourmen.meetingplatform.domain.user.entity.User;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,8 +23,8 @@ public class IntelligenceController {
 
     @PostMapping("/search")
     @ApiResponseMessage("회의록 검색을 성공하였습니다.")
-    public SearchResponse search(@RequestBody SearchRequest request) {
-        String answer = aiIntelligenceService.searchAndAnswer(request.getQuery());
+    public SearchResponse search(@RequestBody SearchRequest request, @AuthenticationPrincipal User user) {
+        String answer = aiIntelligenceService.searchAndAnswer(request.getQuery(), user);
         return new SearchResponse(answer);
     }
 }
