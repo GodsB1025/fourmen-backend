@@ -5,6 +5,7 @@ import com.fourmen.meetingplatform.common.exception.CustomException;
 import com.fourmen.meetingplatform.domain.calendarevent.entity.CalendarEvent;
 import com.fourmen.meetingplatform.domain.calendarevent.repository.CalendarEventRepository;
 import com.fourmen.meetingplatform.domain.calendarevent.service.CalendarService;
+import com.fourmen.meetingplatform.domain.intelligence.service.AiIntelligenceService;
 import com.fourmen.meetingplatform.domain.meeting.dto.request.MeetingRequest;
 import com.fourmen.meetingplatform.domain.meeting.dto.response.MeetingInfoForContractResponse;
 import com.fourmen.meetingplatform.domain.meeting.dto.response.MeetingResponse;
@@ -54,6 +55,7 @@ public class MeetingService {
     private final ObjectMapper objectMapper;
     private final GptService gptService;
     private final MeetingRoomService meetingRoomService;
+    private final AiIntelligenceService aiIntelligenceService;
 
     @Transactional
     public MeetingResponse createMeeting(MeetingRequest request, User host) {
@@ -221,7 +223,7 @@ public class MeetingService {
                 .build();
         minutesRepository.save(autoMinutes);
         log.info("회의 ID {}에 대한 자동 회의록(ID: {})을 성공적으로 생성했습니다.", meeting.getId(), autoMinutes.getId());
-
+        aiIntelligenceService.indexMeetingMinutes(autoMinutes);
         // 4. 생성된 자동 회의록 내용을 GPT에 보내 요약본 생성 (비동기 처리)
         gptService.summarize(autoMinutesContent)
                 .flatMap(summary -> {
