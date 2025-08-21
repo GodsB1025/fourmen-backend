@@ -17,7 +17,6 @@ public class SttRecord {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // DB 스키마에 맞게 meeting 과의 관계만 정의합니다.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "meeting_id", nullable = false)
     private Meeting meeting;

@@ -24,7 +24,6 @@ public class VicolloClient {
         this.authHeader = "Basic " + Base64.getEncoder().encodeToString((appId + ":" + appSecret).getBytes());
     }
 
-    // Vicollo 사용자 생성/업데이트
     public Mono<Void> createOrUpdateMember(VicolloRequest.CreateMember request) {
         return webClient.post()
                 .uri("/v2/vicollo-apps/me/members")
@@ -35,7 +34,6 @@ public class VicolloClient {
                 .bodyToMono(Void.class);
     }
 
-    // Vicollo 화상 회의실 생성
     public Mono<VicolloResponse.Room> createVideoRoom(VicolloRequest.CreateRoom request) {
         return webClient.post()
                 .uri("/v2/vicollo-apps/me/video-rooms")
@@ -46,7 +44,6 @@ public class VicolloClient {
                 .bodyToMono(VicolloResponse.Room.class);
     }
 
-    // Vicollo 화상 회의실 참여를 위한 Embed URL 생성
     public Mono<VicolloResponse.EmbedUrl> createEmbedUrl(Integer videoRoomId, String appUserId,
             VicolloRequest.CreateEmbedUrl request) {
         return webClient.post()

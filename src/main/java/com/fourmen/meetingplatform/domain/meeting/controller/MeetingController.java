@@ -94,4 +94,14 @@ public class MeetingController {
             @AuthenticationPrincipal User user) {
         meetingService.endMeeting(meetingId, user);
     }
+
+    @Operation(summary = "외부 인력 초대 URL 생성", description = "특정 회의에 외부 인력을 초대하기 위한 URL을 생성합니다.")
+    @Parameter(name = "meetingId", description = "초대할 회의의 ID", required = true)
+    @PostMapping("/{meetingId}/invite")
+    @ApiResponseMessage("외부 인력 초대 URL이 성공적으로 생성되었습니다.")
+    public VideoMeetingUrlResponse inviteGuest(
+            @PathVariable Long meetingId,
+            @AuthenticationPrincipal User user) {
+        return meetingService.inviteGuest(meetingId, user);
+    }
 }

@@ -52,7 +52,8 @@ public class CalendarEvent {
     private LocalDateTime updatedAt;
 
     @Builder
-    public CalendarEvent(User user, Meeting meeting, String title, LocalDateTime startTime, LocalDateTime endTime, EventType eventType) {
+    public CalendarEvent(User user, Meeting meeting, String title, LocalDateTime startTime, LocalDateTime endTime,
+            EventType eventType) {
         this.user = user;
         this.meeting = meeting;
         this.title = title;
@@ -61,7 +62,6 @@ public class CalendarEvent {
         this.eventType = eventType;
     }
 
-    // 수정 메서드 추가
     public void update(String title, LocalDateTime startTime, LocalDateTime endTime) {
         if (title != null) {
             this.title = title;

@@ -53,7 +53,7 @@ public class MinutesController {
     @Operation(summary = "회의록 상세 조회", description = "특정 회의록의 상세 내용을 조회")
     @Parameter(name = "meetingId", description = "조회할 회의록이 속한 회의의 ID", required = true)
     @Parameter(name = "minuteId", description = "조회할 회의록의 ID", required = true)
-    @GetMapping("/{minuteId}") // 기존 PatchMapping과 경로가 겹치므로 수정
+    @GetMapping("/{minuteId}")
     @ApiResponseMessage("회의록 상세 조회를 성공하였습니다.")
     public MinuteDetailResponse getMinuteDetails(
             @PathVariable Long meetingId,
