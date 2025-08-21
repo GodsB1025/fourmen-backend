@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.time.Duration;
 import java.util.*;
@@ -22,6 +23,10 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class AiIntelligenceService {
+
+    // ================== [수정 포인트 1] ==================
+    // 말씀하신 512 차원을 상수로 정의합니다.
+    private static final int PINECONE_INDEX_DIMENSION = 1536;
 
     private final OpenAiService openAiService;
     private final WebClient pineconeWebClient;
@@ -37,10 +42,9 @@ public class AiIntelligenceService {
         this.openAiService = new OpenAiService(openaiApiKey, Duration.ofSeconds(60));
         this.intelligenceRepository = intelligenceRepository;
 
-        // Pinecone REST API 클라이언트 설정 (수정된 부분)
         this.pineconeWebClient = webClientBuilder
                 .baseUrl("https://" + pineconeIndexHost)
-                .defaultHeader("Api-Key", pineconeApiKey) // 헤더 이름을 "Api-Key"로 변경하고, "Bearer " 접두사 제거
+                .defaultHeader("Api-Key", pineconeApiKey)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .build();
     }
@@ -48,15 +52,28 @@ public class AiIntelligenceService {
     @Transactional
     public void indexMeetingMinutes(Minutes minutes) {
         String content = minutes.getContent();
-        // 실제 운영 시에는 content를 의미 있는 문단(chunk)으로 나누는 로직이 필요합니다.
+        if (content == null || content.isBlank()) {
+            log.warn("벡터화할 내용이 없습니다. (회의록 ID: {})", minutes.getId());
+            return;
+        }
+
         List<String> chunks = List.of(content);
 
         for (String chunk : chunks) {
             try {
                 List<Float> vector = createEmbedding(chunk);
+
+                // ================== [수정 포인트 2] ==================
+                // 벡터 차원 검증 로직 추가 (400 Bad Request 방지)
+                if (vector.size() != PINECONE_INDEX_DIMENSION) {
+                    System.out.println(vector.size());
+                    log.error("벡터 차원 불일치! 생성된 벡터 차원: {}, Pinecone 인덱스 필요 차원: {}. (회의록 ID: {})",
+                            vector.size(), PINECONE_INDEX_DIMENSION, minutes.getId());
+                    continue; // 이 청크는 건너뛰고 다음으로 진행
+                }
+
                 String vectorId = UUID.randomUUID().toString();
 
-                // Pinecone REST API를 통한 벡터 업서트
                 Map<String, Object> upsertData = Map.of(
                         "vectors", List.of(Map.of(
                                 "id", vectorId,
@@ -81,8 +98,13 @@ public class AiIntelligenceService {
                 intelligenceRepository.save(intelligence);
 
                 log.info("회의록 ID {}의 내용을 벡터화하여 저장했습니다. (Vector ID: {})", minutes.getId(), vectorId);
+
+            } catch (WebClientResponseException e) {
+                // Pinecone API 에러 발생 시 응답 본문을 로그로 남겨 정확한 원인 파악
+                log.error("Pinecone 벡터화 실패 (회의록 ID: {}): HTTP Status {}, Response Body: {}",
+                        minutes.getId(), e.getStatusCode(), e.getResponseBodyAsString(), e);
             } catch (Exception e) {
-                log.error("회의록 벡터화 실패 (회의록 ID: {})", minutes.getId(), e);
+                log.error("처리되지 않은 예외 발생 (회의록 ID: {})", minutes.getId(), e);
             }
         }
     }
@@ -92,7 +114,6 @@ public class AiIntelligenceService {
         try {
             List<Float> queryVector = createEmbedding(userQuery);
 
-            // Pinecone REST API를 통한 쿼리
             Map<String, Object> queryData = Map.of(
                     "vector", queryVector,
                     "topK", 3,
@@ -157,6 +178,9 @@ public class AiIntelligenceService {
     }
 
     private List<Float> createEmbedding(String text) {
+        // 주의: text-embedding-3-small 모델은 1536차원 벡터를 반환합니다.
+        // 만약 512 차원 벡터가 필요하다면, 그에 맞는 다른 임베딩 모델을 사용하셔야 합니다.
+        // 예시: model("다른-512차원-모델명")
         EmbeddingRequest embeddingRequest = EmbeddingRequest.builder()
                 .model("text-embedding-3-small")
                 .input(Collections.singletonList(text))
