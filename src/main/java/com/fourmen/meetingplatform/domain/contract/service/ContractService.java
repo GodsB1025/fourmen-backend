@@ -2,6 +2,7 @@ package com.fourmen.meetingplatform.domain.contract.service;
 
 import com.fourmen.meetingplatform.common.exception.CustomException;
 import com.fourmen.meetingplatform.domain.contract.dto.request.ContractSendRequestDto;
+import com.fourmen.meetingplatform.domain.contract.dto.response.CompletedContractResponse;
 import com.fourmen.meetingplatform.domain.contract.entity.Contract;
 import com.fourmen.meetingplatform.domain.contract.entity.ContractStatus;
 import com.fourmen.meetingplatform.domain.contract.repository.ContractRepository;
@@ -15,6 +16,10 @@ import com.fourmen.meetingplatform.infra.eformsign.EformSignApiClient;
 import com.fourmen.meetingplatform.infra.eformsign.dto.response.EformSignSendResponse;
 import com.fourmen.meetingplatform.infra.eformsign.service.EformSignTokenService;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,5 +68,13 @@ public class ContractService {
                 .build();
 
         contractRepository.save(contract);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CompletedContractResponse> getCompletedContracts(User user) {
+        List<Contract> contracts = contractRepository.findCompletedContractsByUserId(user.getId());
+        return contracts.stream()
+                .map(CompletedContractResponse::from)
+                .collect(Collectors.toList());
     }
 }
