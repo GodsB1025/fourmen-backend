@@ -3,6 +3,7 @@ package com.fourmen.meetingplatform.domain.contract.controller;
 import com.fourmen.meetingplatform.common.response.ApiResponse;
 import com.fourmen.meetingplatform.common.response.ApiResponseMessage;
 import com.fourmen.meetingplatform.domain.contract.dto.request.ContractSendRequestDto;
+import com.fourmen.meetingplatform.domain.contract.dto.response.CompletedContractResponse;
 import com.fourmen.meetingplatform.domain.contract.service.ContractService;
 import com.fourmen.meetingplatform.domain.user.entity.User;
 
@@ -10,6 +11,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -39,5 +43,12 @@ public class ContractController {
         return ResponseEntity
                 .status(HttpStatus.ACCEPTED)
                 .body(ApiResponse.success("계약서 발송 요청이 정상적으로 접수되었습니다."));
+    }
+
+    @Operation(summary = "완료된 계약서 목록 조회", description = "현재 사용자가 관련된 (회의 참여자 기준) 완료된 모든 계약서 목록을 조회")
+    @GetMapping("/completed")
+    @ApiResponseMessage("완료된 계약서 목록 조회를 성공하였습니다.")
+    public List<CompletedContractResponse> getCompletedContracts(@AuthenticationPrincipal User user) {
+        return contractService.getCompletedContracts(user);
     }
 }

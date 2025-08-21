@@ -12,4 +12,12 @@ public class MeetingRequest {
     private LocalDateTime scheduledAt;
     private boolean useAiMinutes;
     private String[] participantEmails;
+
+    public void setScheduledAt(LocalDateTime scheduledAt) {
+        if (scheduledAt != null) {
+            this.scheduledAt = scheduledAt.plusHours(9);
+        } else {
+            this.scheduledAt = null;
+        }
+    }
 }
