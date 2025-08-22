@@ -9,8 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 
 @Controller
@@ -24,9 +24,7 @@ public class ChatController {
     public void sendMessage(
             @DestinationVariable Long roomId,
             @Payload ChatMessageRequest requestDto,
-            SimpMessageHeaderAccessor headerAccessor) {
-
-        User sender = (User) headerAccessor.getSessionAttributes().get("user");
+            @AuthenticationPrincipal User sender) {
 
         if (sender == null) {
             return;
