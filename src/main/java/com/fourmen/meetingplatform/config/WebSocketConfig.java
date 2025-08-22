@@ -4,7 +4,6 @@ import com.fourmen.meetingplatform.domain.stt.handler.AudioStreamHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
@@ -21,7 +20,6 @@ import org.springframework.web.socket.server.HandshakeInterceptor;
 public class WebSocketConfig implements WebSocketConfigurer, WebSocketMessageBrokerConfigurer {
 
     private final AudioStreamHandler audioStreamHandler;
-    private final StompAuthChannelInterceptor stompAuthChannelInterceptor;
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
@@ -33,6 +31,7 @@ public class WebSocketConfig implements WebSocketConfigurer, WebSocketMessageBro
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws/chat")
                 .setAllowedOrigins("http://localhost:5173")
+                .addInterceptors(handshakeInterceptor())
                 .withSockJS();
     }
 
@@ -46,10 +45,5 @@ public class WebSocketConfig implements WebSocketConfigurer, WebSocketMessageBro
         registry.addHandler(audioStreamHandler, "/ws/audio/{meetingId}")
                 .addInterceptors(handshakeInterceptor())
                 .setAllowedOrigins("*");
-    }
-
-    @Override
-    public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(stompAuthChannelInterceptor);
     }
 }
