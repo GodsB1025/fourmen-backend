@@ -18,6 +18,7 @@ import com.fourmen.meetingplatform.domain.minutes.dto.response.MinuteInfoRespons
 import com.fourmen.meetingplatform.domain.minutes.entity.Minutes;
 import com.fourmen.meetingplatform.domain.minutes.entity.MinutesType;
 import com.fourmen.meetingplatform.domain.minutes.repository.MinutesRepository;
+import com.fourmen.meetingplatform.domain.nlp.dto.NlpMeetingInfo;
 import com.fourmen.meetingplatform.domain.stt.dto.UtteranceDto;
 import com.fourmen.meetingplatform.domain.stt.entity.SttRecord;
 import com.fourmen.meetingplatform.domain.stt.repository.SttRecordRepository;
@@ -59,11 +60,27 @@ public class MeetingService {
 
     @Transactional
     public MeetingResponse createMeeting(MeetingRequest request, User host) {
+        return createMeeting(request.getTitle(), request.getScheduledAt(), request.isUseAiMinutes(), request.getParticipantEmails(), host);
+    }
+
+    @Transactional
+    public MeetingResponse createMeetingFromNlpInfo(NlpMeetingInfo nlpMeetingInfo, User host) {
+        List<String> participantEmails = new ArrayList<>();
+        if (nlpMeetingInfo.getParticipants() != null) {
+            for (String name : nlpMeetingInfo.getParticipants()) {
+                userRepository.findByName(name)
+                        .ifPresent(user -> participantEmails.add(user.getEmail()));
+            }
+        }
+        return createMeeting(nlpMeetingInfo.getTitle(), nlpMeetingInfo.getScheduledAt(), true, participantEmails.toArray(new String[0]), host);
+    }
+
+    private MeetingResponse createMeeting(String title, LocalDateTime scheduledAt, boolean useAiMinutes, String[] participantEmails, User host) {
         Meeting meeting = Meeting.builder()
                 .host(host)
-                .title(request.getTitle())
-                .scheduledAt(request.getScheduledAt())
-                .useAiMinutes(request.isUseAiMinutes())
+                .title(title)
+                .scheduledAt(scheduledAt)
+                .useAiMinutes(useAiMinutes)
                 .build();
         Meeting savedMeeting = meetingRepository.save(meeting);
 
@@ -72,8 +89,8 @@ public class MeetingService {
 
         meetingParticipantRepository.save(new MeetingParticipant(savedMeeting, host));
 
-        if (request.getParticipantEmails() != null) {
-            for (String email : request.getParticipantEmails()) {
+        if (participantEmails != null) {
+            for (String email : participantEmails) {
                 User participant = userRepository.findByEmail(email)
                         .orElseThrow(() -> new CustomException("참가자를 찾을 수 없습니다: " + email, HttpStatus.NOT_FOUND));
                 meetingParticipantRepository.save(new MeetingParticipant(savedMeeting, participant));
