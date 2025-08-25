@@ -1,6 +1,9 @@
 package com.fourmen.meetingplatform.domain.minutes.service;
 
 import com.fourmen.meetingplatform.common.exception.CustomException;
+import com.fourmen.meetingplatform.domain.contract.entity.Contract;
+import com.fourmen.meetingplatform.domain.contract.repository.ContractRepository;
+import com.fourmen.meetingplatform.domain.document.dto.response.ContractInfoDto;
 import com.fourmen.meetingplatform.domain.meeting.entity.Meeting;
 import com.fourmen.meetingplatform.domain.meeting.repository.MeetingParticipantRepository;
 import com.fourmen.meetingplatform.domain.meeting.repository.MeetingRepository;
@@ -26,6 +29,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +40,7 @@ public class MinutesService {
     private final MinutesShareRepository minutesShareRepository;
     private final UserRepository userRepository;
     private final MeetingParticipantRepository meetingParticipantRepository;
+    private final ContractRepository contractRepository;
 
     @Transactional
     public MinuteSaveResponse createManualMinutes(Long meetingId, MinuteSaveRequest requestDto, User user) {
@@ -121,9 +126,33 @@ public class MinutesService {
 
     @Transactional(readOnly = true)
     public List<SharedMinuteResponse> getSharedMinutes(User user) {
-        return minutesShareRepository.findMinutesSharedWithUser(user.getId())
-                .stream()
-                .map(SharedMinuteResponse::from)
+        List<Minutes> sharedMinutesList = minutesShareRepository.findMinutesSharedWithUser(user.getId());
+
+        if (sharedMinutesList.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<Long> minuteIds = sharedMinutesList.stream()
+                .map(Minutes::getId)
+                .collect(Collectors.toList());
+
+        List<Contract> relatedContracts = contractRepository.findByMinutes_IdIn(minuteIds);
+
+        Map<Long, List<ContractInfoDto>> contractsByMinuteId = relatedContracts.stream()
+                .collect(Collectors.groupingBy(
+                        contract -> contract.getMinutes().getId(),
+                        Collectors.mapping(contract -> ContractInfoDto.builder()
+                                .contractId(contract.getId())
+                                .title(contract.getTitle())
+                                .completedPdfUrl(contract.getCompletedPdfUrl())
+                                .build(), Collectors.toList())));
+
+        return sharedMinutesList.stream()
+                .map(minutes -> {
+                    List<ContractInfoDto> contracts = contractsByMinuteId.getOrDefault(minutes.getId(),
+                            new ArrayList<>());
+                    return SharedMinuteResponse.from(minutes, contracts);
+                })
                 .collect(Collectors.toList());
     }
 }

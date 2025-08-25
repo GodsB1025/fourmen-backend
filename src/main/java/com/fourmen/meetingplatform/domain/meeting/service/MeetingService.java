@@ -67,7 +67,8 @@ public class MeetingService {
                 participants.add(participant);
             }
         }
-        return createMeeting(request.getTitle(), request.getScheduledAt(), request.isUseAiMinutes(), participants, host);
+        return createMeeting(request.getTitle(), request.getScheduledAt(), request.isUseAiMinutes(), participants,
+                host);
     }
 
     @Transactional
@@ -82,7 +83,8 @@ public class MeetingService {
         return createMeeting(nlpMeetingInfo.getTitle(), nlpMeetingInfo.getScheduledAt(), true, participants, host);
     }
 
-    private MeetingResponse createMeeting(String title, LocalDateTime scheduledAt, boolean useAiMinutes, List<User> participants, User host) {
+    private MeetingResponse createMeeting(String title, LocalDateTime scheduledAt, boolean useAiMinutes,
+            List<User> participants, User host) {
         Meeting meeting = Meeting.builder()
                 .host(host)
                 .title(title)
@@ -104,7 +106,6 @@ public class MeetingService {
 
         return MeetingResponse.from(savedMeeting);
     }
-
 
     @Transactional(readOnly = true)
     public List<MeetingResponse> getMeetings(String filter, User user) {
@@ -148,7 +149,7 @@ public class MeetingService {
             throw new CustomException("소속된 회사가 없어 조회할 수 없습니다.", HttpStatus.BAD_REQUEST);
         }
 
-        List<Meeting> meetings = meetingRepository.findMeetingsWithMinutesByCompanyId(user.getCompany().getId());
+        List<Meeting> meetings = meetingRepository.findMeetingsWithMinutesByUserId(user.getId());
 
         return meetings.stream()
                 .map(MeetingInfoForContractResponse::from)
