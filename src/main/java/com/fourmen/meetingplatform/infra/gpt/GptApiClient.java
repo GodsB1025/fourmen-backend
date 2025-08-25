@@ -37,6 +37,6 @@ public class GptApiClient {
                 .retrieve()
                 .bodyToMono(GptResponse.class)
                 .doOnSuccess(response -> log.info("GPT API로부터 요약 응답을 받았습니다."))
-                .doOnError(error -> log.error("GPT API 요청 중 오류가 발생했습니다.", error));
+                .doOnError(error -> log.error("GPT API 요청 중 오류가 발생했습니다.E", error));
     }
 }
