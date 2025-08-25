@@ -1,0 +1,38 @@
+name: Deploy Backend to NHN Cloud
+
+on:
+  push:
+    branches:
+      - main   # main 브랜치에 push 될 때마다 실행
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. GitHub 저장소에서 코드 가져오기
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. NHN Cloud 서버에 SSH 접속해서 배포
+      - name: Deploy to NHN Cloud via SSH
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}     # GitHub Secrets에서 설정
+          username: ubuntu                   # NHN Cloud Ubuntu 기본 계정
+          key: ${{ secrets.SSH_KEY }}        # pem 키 내용 (Secrets에 저장)
+          script: |
+            # 배포할 프로젝트 경로 (최초 clone은 직접 해둬야 함)
+            cd ~/fourmen-backend
+
+            # 최신 코드 가져오기
+            git pull origin main
+
+            # Maven 빌드 (테스트는 건너뛰기)
+            ./mvnw clean package -DskipTests
+
+            # 기존 실행중인 Spring Boot 종료
+            pkill -f 'java -jar' || true
+
+            # 새 JAR 실행 (nohup으로 백그라운드 실행)
+            nohup java -jar target/*.jar > app.log 2>&1 &
