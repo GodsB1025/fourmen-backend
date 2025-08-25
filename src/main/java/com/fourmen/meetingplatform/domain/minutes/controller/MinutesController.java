@@ -2,6 +2,7 @@ package com.fourmen.meetingplatform.domain.minutes.controller;
 
 import com.fourmen.meetingplatform.common.response.ApiResponseMessage;
 import com.fourmen.meetingplatform.domain.minutes.dto.request.MinuteSaveRequest;
+import com.fourmen.meetingplatform.domain.minutes.dto.request.ShareMinutesRequest;
 import com.fourmen.meetingplatform.domain.minutes.dto.response.MinuteDetailResponse;
 import com.fourmen.meetingplatform.domain.minutes.dto.response.MinuteSaveResponse;
 import com.fourmen.meetingplatform.domain.minutes.dto.response.MinuteUpdateResponse;
@@ -60,5 +61,16 @@ public class MinutesController {
             @PathVariable Long minuteId,
             @AuthenticationPrincipal User user) {
         return minutesService.getMinuteDetails(meetingId, minuteId, user);
+    }
+
+    @Operation(summary = "회의록 공유", description = "특정 회의록을 다른 사용자들과 공유합니다.")
+    @PostMapping("/{minuteId}/share")
+    @ApiResponseMessage("회의록이 성공적으로 공유되었습니다.")
+    public void shareMinutes(
+            @PathVariable Long meetingId,
+            @PathVariable Long minuteId,
+            @RequestBody ShareMinutesRequest request,
+            @AuthenticationPrincipal User user) {
+        minutesService.shareMinutes(meetingId, minuteId, request, user);
     }
 }
