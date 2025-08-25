@@ -61,7 +61,7 @@ jobs:
           source: "*.jar"
           target: "/home/ubuntu/fourmen-backend"
 
-      # (2-3) SSH로 서버에 접속해서 원인 진단
+      # (2-3) SSH로 서버에 접속해서 앱을 실행
       - name: Deploy to NHN Cloud via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -69,23 +69,13 @@ jobs:
           username: ubuntu
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # --- 여기부터 NHN Cloud 서버에서 실행됩니다 ---
             cd /home/ubuntu/fourmen-backend
 
-            # 진단 1: 현재 위치와 파일 목록을 확인합니다. (.jar 파일이 있는지 확인)
-            echo "====== 1. Checking current directory and files ======"
-            pwd
-            ls -l
-            echo "======================================================"
+            # 1. 기존에 실행 중인 앱을 종료
+            sudo pkill -f 'java -jar' || true
 
-            # 진단 2: Java가 설치되어 있고 실행 가능한지 확인합니다.
-            echo "====== 2. Checking Java version ======"
-            java --version
-            echo "======================================="
+            # 2. (⭐️핵심 해결책) 기존 앱이 종료되고 포트를 반납할 시간을 벌어줌
+            sleep 5
 
-            # 진단 3: 애플리케이션을 포그라운드에서 직접 실행해봅니다.
-            # 이 단계는 일부러 실패하거나 타임아웃될 수 있지만,
-            # 그 과정에서 나오는 에러 메시지가 가장 중요합니다.
-            echo "====== 3. Attempting to run JAR in foreground ======"
-            java -jar *.jar
-            echo "===================================================="
+            # 3. 새 버전의 앱을 실행
+            setsid java -jar *.jar > app.log 2>&1 &
