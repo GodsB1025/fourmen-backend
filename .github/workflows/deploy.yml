@@ -61,7 +61,7 @@ jobs:
           source: "*.jar"
           target: "/home/ubuntu/fourmen-backend"
 
-      # (2-3) SSH로 서버에 접속해서 앱을 실행
+      # (2-3) SSH로 서버에 접속해서 앱을 강제 종료 후 실행
       - name: Deploy to NHN Cloud via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -71,11 +71,25 @@ jobs:
           script: |
             cd /home/ubuntu/fourmen-backend
 
-            # 1. 기존에 실행 중인 앱을 종료
-            sudo pkill -f 'java -jar' || true
+            # 1. 실행중인 jar 파일의 프로세스 ID(PID)를 직접 찾습니다.
+            # `grep -v grep`은 grep 명령어 자체는 검색에서 제외하는 역할입니다.
+            PID=$(ps -ef | grep 'java -jar' | grep -v grep | awk '{print $2}')
 
-            # 2. (⭐️핵심 해결책) 기존 앱이 종료되고 포트를 반납할 시간을 벌어줌
-            sleep 5
+            # 2. PID가 존재한다면(앱이 실행중이라면), kill -9 명령어로 강제 종료시킵니다.
+            if [ -n "$PID" ]; then
+              echo "Found running process with PID: $PID. Force killing it with kill -9."
+              sudo kill -9 $PID
+              sleep 5 # OS가 포트를 완전히 해제할 시간을 줍니다.
+            else
+              echo "No running process found. Skipping kill command."
+            fi
 
-            # 3. 새 버전의 앱을 실행
+            # 3. 새 버전의 앱을 실행합니다.
+            echo "Starting new application..."
             setsid java -jar *.jar > app.log 2>&1 &
+
+            # 4. (디버깅) 앱이 정상 실행되었는지 로그를 확인합니다.
+            sleep 10 # 앱이 시작될 시간을 충분히 줍니다.
+            echo "====== Displaying new app.log to check status ======"
+            cat app.log
+            echo "====================================================="
