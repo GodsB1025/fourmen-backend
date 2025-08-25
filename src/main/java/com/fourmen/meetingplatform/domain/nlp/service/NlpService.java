@@ -46,10 +46,8 @@ public class NlpService {
         if (rawResponse == null) {
             return "{}";
         }
-        // 마크다운 코드 블록 제거 및 앞뒤 공백 제거
         String sanitized = rawResponse.trim().replace("```json", "").replace("```", "").trim();
 
-        // 응답이 '{'로 시작하지 않으면 첫 '{'를 찾아서 그 부분부터 사용
         if (!sanitized.startsWith("{")) {
             int braceIndex = sanitized.indexOf('{');
             if (braceIndex != -1) {

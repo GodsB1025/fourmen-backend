@@ -57,9 +57,6 @@ public class MeetingService {
     private final MeetingRoomService meetingRoomService;
     private final AiIntelligenceService aiIntelligenceService;
 
-    /**
-     * 사용자의 직접 요청으로 회의를 생성합니다.
-     */
     @Transactional
     public MeetingResponse createMeeting(MeetingRequest request, User host) {
         List<User> participants = new ArrayList<>();
@@ -73,9 +70,6 @@ public class MeetingService {
         return createMeeting(request.getTitle(), request.getScheduledAt(), request.isUseAiMinutes(), participants, host);
     }
 
-    /**
-     * NLP 분석 결과로 회의를 생성합니다.
-     */
     @Transactional
     public MeetingResponse createMeetingFromNlpInfo(NlpMeetingInfo nlpMeetingInfo, User host) {
         List<User> participants = new ArrayList<>();
@@ -88,9 +82,6 @@ public class MeetingService {
         return createMeeting(nlpMeetingInfo.getTitle(), nlpMeetingInfo.getScheduledAt(), true, participants, host);
     }
 
-    /**
-     * 회의 생성 및 참여자 처리 공통 로직
-     */
     private MeetingResponse createMeeting(String title, LocalDateTime scheduledAt, boolean useAiMinutes, List<User> participants, User host) {
         Meeting meeting = Meeting.builder()
                 .host(host)
@@ -100,18 +91,15 @@ public class MeetingService {
                 .build();
         Meeting savedMeeting = meetingRepository.save(meeting);
 
-        // 회의 주최자(host)를 참여자 목록에 추가
         List<User> allParticipants = new ArrayList<>();
         allParticipants.add(host);
         allParticipants.addAll(participants);
 
-        // 중복 제거 및 DB 저장
         List<User> distinctParticipants = allParticipants.stream().distinct().collect(Collectors.toList());
         for (User participant : distinctParticipants) {
             meetingParticipantRepository.save(new MeetingParticipant(savedMeeting, participant));
         }
 
-        // 캘린더에 일정 추가
         calendarService.addMeetingToCalendar(savedMeeting, distinctParticipants);
 
         return MeetingResponse.from(savedMeeting);
