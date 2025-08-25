@@ -1,47 +1,78 @@
-name: Deploy Backend to NHN Cloud
+name: Deploy Backend to NHN Cloud (Build and Deploy)
 
 on:
-    push:
-        branches:
-            - main
+  push:
+    branches:
+      - main # main 브랜치에 push 될 때마다 실행
 
 jobs:
-    deploy:
-        runs-on: ubuntu-latest
+  # ===============================================================
+  # 1. Build Job: GitHub 서버에서 소스코드를 빌드하여 .jar 파일을 생성
+  # ===============================================================
+  build:
+    runs-on: ubuntu-latest # GitHub이 제공하는 가상머신에서 실행
+    steps:
+      # (1-1) GitHub 저장소에서 코드 가져오기
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v3
+      # (1-2) JDK 17 설정
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
-            - name: Deploy to NHN Cloud via SSH
-              uses: appleboy/ssh-action@v0.1.7
-              with:
-                  host: ${{ secrets.SERVER_IP }}
-                  username: ubuntu
-                  key: ${{ secrets.SSH_KEY }}
-                  script: |
-                      # --- 여기부터 NHN Cloud 서버에서 실행됩니다 ---
+      # (1-3) Maven 빌드 실행 (메모리를 가장 많이 쓰는 작업)
+      - name: Build with Maven
+        run: ./mvnw clean package -DskipTests
 
-                      # (⭐️핵심 해결책) 프로젝트 폴더 전체의 소유자를 'ubuntu'로 강제 변경
-                      # sudo를 사용해 root 권한으로 소유권을 변경합니다.
-                      sudo chown -R ubuntu:ubuntu /home/ubuntu/fourmen-backend
+      # (1-4) 빌드된 .jar 파일을 GitHub Actions에 임시 저장 (Artifact로 업로드)
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: executable-jar # 아티팩트 이름 지정
+          path: target/*.jar  # target 폴더 아래의 .jar 파일을 업로드
 
-                      # 배포할 프로젝트 경로로 이동
-                      cd ~/fourmen-backend
+  # ===============================================================
+  # 2. Deploy Job: 빌드된 .jar 파일을 실제 서버에 배포
+  # ===============================================================
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build # ★ build 작업이 성공해야만 이 작업을 실행
+    steps:
+      # (2-1) build 작업에서 업로드한 .jar 파일을 다운로드
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: executable-jar # build에서 지정한 아티팩트 이름
 
-                      # git pull을 실행하기 전에 이 디렉토리가 안전하다고 설정
-                      git config --global --add safe.directory /home/ubuntu/fourmen-backend
+      # (2-2) scp를 사용해 .jar 파일을 NHN Cloud 서버로 복사
+      - name: Copy JAR to server via scp
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ubuntu
+          key: ${{ secrets.SSH_KEY }}
+          source: "*.jar" # 다운로드한 모든 .jar 파일을 의미
+          target: "/home/ubuntu/fourmen-backend" # 서버의 프로젝트 폴더
 
-                      # 최신 코드 가져오기
-                      git pull origin main
+      # (2-3) SSH로 서버에 접속해서 앱을 실행 (빌드 과정 없음)
+      - name: Deploy to NHN Cloud via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ubuntu
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            # --- 여기부터 NHN Cloud 서버에서 실행됩니다 ---
+            cd /home/ubuntu/fourmen-backend
 
-                      # Maven 빌드
-                      ./mvnw clean package -DskipTests
+            # 기존 실행중인 Spring Boot 종료
+            pkill -f 'java -jar' || true
 
-                      # 기존 실행중인 Spring Boot 종료
-                      pkill -f 'java -jar' || true
-
-                      # 새 JAR 실행
-                      nohup java -jar target/*.jar > app.log 2>&1 &
-
-                      sleep 30
+            # 새 JAR 실행 (서버에서는 실행만 담당)
+            nohup java -jar *.jar > app.log 2>&1 &
+            
+            # 새 앱이 안정적으로 실행될 시간을 벌어줍니다
+            sleep 5
