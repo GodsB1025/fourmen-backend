@@ -26,7 +26,6 @@ import com.fourmen.meetingplatform.domain.user.entity.Role;
 import com.fourmen.meetingplatform.domain.user.entity.User;
 import com.fourmen.meetingplatform.domain.user.repository.UserRepository;
 import com.fourmen.meetingplatform.infra.gpt.service.GptService;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -58,24 +57,41 @@ public class MeetingService {
     private final MeetingRoomService meetingRoomService;
     private final AiIntelligenceService aiIntelligenceService;
 
+    /**
+     * 사용자의 직접 요청으로 회의를 생성합니다.
+     */
     @Transactional
     public MeetingResponse createMeeting(MeetingRequest request, User host) {
-        return createMeeting(request.getTitle(), request.getScheduledAt(), request.isUseAiMinutes(), request.getParticipantEmails(), host);
-    }
-
-    @Transactional
-    public MeetingResponse createMeetingFromNlpInfo(NlpMeetingInfo nlpMeetingInfo, User host) {
-        List<String> participantEmails = new ArrayList<>();
-        if (nlpMeetingInfo.getParticipants() != null) {
-            for (String name : nlpMeetingInfo.getParticipants()) {
-                userRepository.findByName(name)
-                        .ifPresent(user -> participantEmails.add(user.getEmail()));
+        List<User> participants = new ArrayList<>();
+        if (request.getParticipantEmails() != null) {
+            for (String email : request.getParticipantEmails()) {
+                User participant = userRepository.findByEmail(email)
+                        .orElseThrow(() -> new CustomException("참가자를 찾을 수 없습니다: " + email, HttpStatus.NOT_FOUND));
+                participants.add(participant);
             }
         }
-        return createMeeting(nlpMeetingInfo.getTitle(), nlpMeetingInfo.getScheduledAt(), true, participantEmails.toArray(new String[0]), host);
+        return createMeeting(request.getTitle(), request.getScheduledAt(), request.isUseAiMinutes(), participants, host);
     }
 
-    private MeetingResponse createMeeting(String title, LocalDateTime scheduledAt, boolean useAiMinutes, String[] participantEmails, User host) {
+    /**
+     * NLP 분석 결과로 회의를 생성합니다.
+     */
+    @Transactional
+    public MeetingResponse createMeetingFromNlpInfo(NlpMeetingInfo nlpMeetingInfo, User host) {
+        List<User> participants = new ArrayList<>();
+        if (nlpMeetingInfo.getParticipants() != null) {
+            for (String name : nlpMeetingInfo.getParticipants()) {
+                // 명시적 람다를 사용하여 'add' 메서드의 모호성을 해결
+                userRepository.findByName(name).ifPresent(user -> participants.add((User) user));
+            }
+        }
+        return createMeeting(nlpMeetingInfo.getTitle(), nlpMeetingInfo.getScheduledAt(), true, participants, host);
+    }
+
+    /**
+     * 회의 생성 및 참여자 처리 공통 로직
+     */
+    private MeetingResponse createMeeting(String title, LocalDateTime scheduledAt, boolean useAiMinutes, List<User> participants, User host) {
         Meeting meeting = Meeting.builder()
                 .host(host)
                 .title(title)
@@ -84,23 +100,23 @@ public class MeetingService {
                 .build();
         Meeting savedMeeting = meetingRepository.save(meeting);
 
-        List<User> participants = new ArrayList<>();
-        participants.add(host);
+        // 회의 주최자(host)를 참여자 목록에 추가
+        List<User> allParticipants = new ArrayList<>();
+        allParticipants.add(host);
+        allParticipants.addAll(participants);
 
-        meetingParticipantRepository.save(new MeetingParticipant(savedMeeting, host));
-
-        if (participantEmails != null) {
-            for (String email : participantEmails) {
-                User participant = userRepository.findByEmail(email)
-                        .orElseThrow(() -> new CustomException("참가자를 찾을 수 없습니다: " + email, HttpStatus.NOT_FOUND));
-                meetingParticipantRepository.save(new MeetingParticipant(savedMeeting, participant));
-                participants.add(participant);
-            }
+        // 중복 제거 및 DB 저장
+        List<User> distinctParticipants = allParticipants.stream().distinct().collect(Collectors.toList());
+        for (User participant : distinctParticipants) {
+            meetingParticipantRepository.save(new MeetingParticipant(savedMeeting, participant));
         }
-        calendarService.addMeetingToCalendar(savedMeeting, participants);
+
+        // 캘린더에 일정 추가
+        calendarService.addMeetingToCalendar(savedMeeting, distinctParticipants);
 
         return MeetingResponse.from(savedMeeting);
     }
+
 
     @Transactional(readOnly = true)
     public List<MeetingResponse> getMeetings(String filter, User user) {
@@ -144,7 +160,7 @@ public class MeetingService {
             throw new CustomException("소속된 회사가 없어 조회할 수 없습니다.", HttpStatus.BAD_REQUEST);
         }
 
-        List<Meeting> meetings = meetingRepository.findMeetingsWithMinutesByUserId(user.getId());
+        List<Meeting> meetings = meetingRepository.findMeetingsWithMinutesByCompanyId(user.getCompany().getId());
 
         return meetings.stream()
                 .map(MeetingInfoForContractResponse::from)
