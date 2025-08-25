@@ -10,35 +10,32 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-            # 1. GitHub 저장소에서 코드 가져오기
+            # 1. GitHub 저장소에서 코드 가져오기 (이 단계는 SSH만 사용할 경우 필수는 아님)
             - name: Checkout repository
               uses: actions/checkout@v3
 
-            # 2. Git 저장소를 안전한 디렉토리로 등록
-            # 'dubious ownership' 에러를 해결합니다.
-            - name: Mark git directory as safe
-              run: git config --global --add safe.directory /home/ubuntu/fourmen-backend
-
-            # 3. 프로젝트 디렉토리의 소유권을 현재 실행 중인 사용자에게 부여
-            # 'Failed to delete' 권한 문제를 해결합니다.
-            - name: Grant permissions to the project directory
-              run: sudo chown -R $USER:$USER /home/ubuntu/fourmen-backend
-
-            # 4. NHN Cloud 서버에 SSH 접속해서 배포
+            # 2. NHN Cloud 서버에 SSH 접속해서 배포
             - name: Deploy to NHN Cloud via SSH
               uses: appleboy/ssh-action@v0.1.7
               with:
-                  host: ${{ secrets.SERVER_IP }} # GitHub Secrets에서 설정
-                  username: ubuntu # NHN Cloud Ubuntu 기본 계정
-                  key: ${{ secrets.SSH_KEY }} # pem 키 내용 (Secrets에 저장)
+                  host: ${{ secrets.SERVER_IP }}
+                  username: ubuntu
+                  key: ${{ secrets.SSH_KEY }}
                   script: |
-                      # 배포할 프로젝트 경로 (최초 clone은 직접 해둬야 함)
+                      # --- 여기부터 NHN Cloud 서버에서 실행됩니다 ---
+
+                      # 배포할 프로젝트 경로로 이동
                       cd ~/fourmen-backend
+
+                      # (해결책 1) 'dubious ownership' 에러 해결
+                      # git pull을 실행하기 전에 이 디렉토리가 안전하다고 설정합니다.
+                      git config --global --add safe.directory /home/ubuntu/fourmen-backend
 
                       # 최신 코드 가져오기
                       git pull origin main
 
-                      # Maven 빌드 (테스트는 건너뛰기)
+                      # (해결책 2) Maven 빌드
+                      # ubuntu 사용자가 직접 빌드를 실행하므로 target 폴더 삭제 권한 문제가 발생하지 않습니다.
                       ./mvnw clean package -DskipTests
 
                       # 기존 실행중인 Spring Boot 종료
