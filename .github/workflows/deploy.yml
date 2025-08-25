@@ -43,3 +43,5 @@ jobs:
 
                       # 새 JAR 실행
                       nohup java -jar target/*.jar > app.log 2>&1 &
+
+                      sleep 5
