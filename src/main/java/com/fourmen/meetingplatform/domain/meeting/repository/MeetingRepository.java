@@ -17,4 +17,7 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
 
     @Query("SELECT DISTINCT m FROM Meeting m JOIN m.host h WHERE h.company.id = :companyId AND EXISTS (SELECT 1 FROM Minutes min WHERE min.meeting = m)")
     List<Meeting> findMeetingsWithMinutesByCompanyId(@Param("companyId") Long companyId);
+
+    @Query("SELECT DISTINCT m FROM Meeting m JOIN m.participants p WHERE p.user.id = :userId AND EXISTS (SELECT 1 FROM Minutes min WHERE min.meeting = m)")
+    List<Meeting> findMeetingsWithMinutesByUserId(@Param("userId") Long userId);
 }
