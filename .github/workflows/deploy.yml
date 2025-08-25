@@ -70,6 +70,6 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             cd /home/ubuntu/fourmen-backend
-            pkill -f 'java -jar' || true
+            sudo pkill -f 'java -jar' || true
             nohup java -jar *.jar > app.log 2>&1 &
             sleep 5
