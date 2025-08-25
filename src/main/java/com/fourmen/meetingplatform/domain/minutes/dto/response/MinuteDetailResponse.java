@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @Builder
 public class MinuteDetailResponse {
     private Long minuteId;
+    private Long meetingId;
     private String meetingTitle;
     private MinutesType type;
     private String authorName;
@@ -20,6 +21,7 @@ public class MinuteDetailResponse {
     public static MinuteDetailResponse from(Minutes minutes) {
         return MinuteDetailResponse.builder()
                 .minuteId(minutes.getId())
+                .meetingId(minutes.getMeeting().getId())
                 .meetingTitle(minutes.getMeeting().getTitle())
                 .type(minutes.getType())
                 .authorName(minutes.getType() == MinutesType.AUTO ? "System (AI)" : minutes.getAuthor().getName())
