@@ -79,4 +79,47 @@ public class GptService {
                 return gptApiClient.getSummary(request)
                                 .map(GptResponse::getSummary);
         }
+        public Mono<String> extractMeetingInfo(String text) {
+                String prompt = """
+                ## 역할
+                당신은 사용자의 자연어 요청을 분석하여 회의 생성에 필요한 정보를 JSON 형식으로 추출하는 AI 어시스턴트입니다.
+
+                ## 목표
+                주어진 [사용자 요청] 텍스트에서 회의 제목, 날짜 및 시간, 그리고 참여자 명단을 정확하게 추출하여 지정된 JSON 형식으로 반환합니다.
+
+                ## JSON 출력 형식
+                - **반드시** 아래의 키를 가진 JSON 객체 형식으로만 응답해야 합니다.
+                - 응답은 반드시 `{` 문자로 시작하고 `}` 문자로 끝나야 합니다.
+                - 각 키에 해당하는 값이 없으면, 빈 문자열 "" 이나 빈 배열 [] 이 아닌 `null`을 사용해야 합니다.
+                
+                {
+                  "title": "회의 제목",
+                  "scheduledAt": "YYYY-MM-DDTHH:MM:SS",
+                  "participants": ["참여자1", "참여자2"]
+                }
+
+                ## 작업 절차 및 규칙
+                1. [사용자 요청] 텍스트를 분석하여 회의의 주제를 파악하고 'title'을 결정합니다. 명시적인 제목이 없으면 "새 회의"로 설정합니다.
+                2. 텍스트에서 날짜와 시간 정보를 추출하여 'scheduledAt' 값을 'YYYY-MM-DDTHH:MM:SS' 형식으로 변환합니다. 날짜나 시간이 불분명하거나 언급되지 않았다면 null로 설정합니다.
+                3. 텍스트에 언급된 모든 사람의 이름을 추출하여 'participants' 배열에 문자열로 추가합니다. 이름에 '님'과 같은 존칭이 붙어있으면 제거하고 이름만 추출하세요. (예: "홍길동님" -> "홍길동")
+                4. **절대로** JSON 외의 다른 설명, 마크다운 코드 블록(``), 줄바꿈, 공백 등 어떠한 문자도 포함하지 마세요.
+
+                ---
+
+                [사용자 요청]
+                %s
+                """.formatted(text);
+
+                GptRequest.Message message = GptRequest.Message.builder()
+                        .role("user")
+                        .content(prompt)
+                        .build();
+
+                GptRequest request = GptRequest.builder()
+                        .model("gpt-4o")
+                        .messages(Collections.singletonList(message))
+                        .build();
+
+                return gptApiClient.getSummary(request).map(GptResponse::getSummary);
+        }
 }
