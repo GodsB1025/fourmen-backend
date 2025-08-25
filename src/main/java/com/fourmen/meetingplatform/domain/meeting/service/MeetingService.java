@@ -144,7 +144,7 @@ public class MeetingService {
             throw new CustomException("소속된 회사가 없어 조회할 수 없습니다.", HttpStatus.BAD_REQUEST);
         }
 
-        List<Meeting> meetings = meetingRepository.findMeetingsWithMinutesByCompanyId(user.getCompany().getId());
+        List<Meeting> meetings = meetingRepository.findMeetingsWithMinutesByUserId(user.getId());
 
         return meetings.stream()
                 .map(MeetingInfoForContractResponse::from)

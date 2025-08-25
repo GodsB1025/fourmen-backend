@@ -54,7 +54,7 @@ public class VicolloRequest {
             return ViewOptions.builder()
                     .theme(Theme.builder().color("dark").build())
                     .header(Header.defaultHeader())
-                    .sideBar(SideBar.builder().visible(false).build())
+                    .sideBar(SideBar.builder().visible(true).build())
                     .controls(Controls.defaultControls())
                     .build();
         }
@@ -81,11 +81,11 @@ public class VicolloRequest {
 
         public static Header defaultHeader() {
             return Header.builder()
-                    .logo(Logo.builder().visible(true).url("string").build())
-                    .title(VisibleItem.builder().visible(true).build())
+                    .logo(Logo.builder().visible(false).url("string").build())
+                    .title(VisibleItem.builder().visible(false).build())
                     .userCount(VisibleItem.builder().visible(true).build())
                     .currentTime(VisibleItem.builder().visible(true).build())
-                    .leave(Leave.builder().visible(true).url("string").build())
+                    .leave(Leave.builder().visible(false).url("string").build())
                     .build();
         }
     }
@@ -156,11 +156,11 @@ public class VicolloRequest {
             VisibleItem invisible = VisibleItem.builder().visible(false).build();
             return Controls.builder()
                     .toggleCamera(visible).toggleMicrophone(visible)
-                    .toggleScreenShare(invisible).toggleBackgroundBlur(visible)
-                    .toggleVirtualBackground(invisible).toggleLayout(invisible)
-                    .toggleFocusingSpeaker(invisible).copyRoomUuid(invisible)
-                    .emojiReactions(invisible).handRaise(invisible)
-                    .toggleWhiteBoard(invisible)
+                    .toggleScreenShare(visible).toggleBackgroundBlur(visible)
+                    .toggleVirtualBackground(visible).toggleLayout(visible)
+                    .toggleFocusingSpeaker(visible).copyRoomUuid(invisible)
+                    .emojiReactions(visible).handRaise(visible)
+                    .toggleWhiteBoard(visible)
                     .build();
         }
     }
