@@ -61,7 +61,7 @@ jobs:
           source: "*.jar"
           target: "/home/ubuntu/fourmen-backend"
 
-      # (2-3) SSH로 서버에 접속해서 앱을 실행
+      # (2-3) SSH로 서버에 접속해서 앱을 실행 및 디버깅
       - name: Deploy to NHN Cloud via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -70,6 +70,21 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             cd /home/ubuntu/fourmen-backend
+            
+            # --- 이전 실행 로그 확인 (디버깅 단계 1) ---
+            echo "====== Printing previous app.log ======"
+            cat app.log
+            echo "======================================="
+
+            # 기존 프로세스 종료
             sudo pkill -f 'java -jar' || true
+            sleep 2 # 종료 시간 확보
+
+            # 새 JAR 실행
             setsid java -jar *.jar > app.log 2>&1 &
-            sleep 5
+            sleep 5 # 실행 시간 확보
+
+            # --- 시스템 로그 확인 (디버깅 단계 2) ---
+            echo "====== Checking for OOM Killer activity ======"
+            sudo dmesg -T | grep -i "oom-killer"
+            echo "============================================="
