@@ -17,4 +17,6 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
             +
             "ORDER BY c.createdAt DESC")
     List<Contract> findCompletedContractsByUserId(@Param("userId") Long userId);
+
+    List<Contract> findByMinutes_IdIn(List<Long> minuteIds);
 }
