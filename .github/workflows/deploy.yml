@@ -71,5 +71,5 @@ jobs:
           script: |
             cd /home/ubuntu/fourmen-backend
             sudo pkill -f 'java -jar' || true
-            nohup java -jar *.jar > app.log 2>&1 &
+            setsid java -jar *.jar > app.log 2>&1 &
             sleep 5
