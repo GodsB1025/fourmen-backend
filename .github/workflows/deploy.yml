@@ -22,12 +22,16 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+      
+      # (1-3) (⭐️핵심 해결책) mvnw 파일에 실행 권한 부여
+      - name: Grant execute permission to mvnw
+        run: chmod +x ./mvnw
 
-      # (1-3) Maven 빌드 실행
+      # (1-4) Maven 빌드 실행
       - name: Build with Maven
         run: ./mvnw clean package -DskipTests
 
-      # (1-4) 빌드된 .jar 파일을 Artifact로 업로드 (v3 -> v4로 수정)
+      # (1-5) 빌드된 .jar 파일을 Artifact로 업로드
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -41,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      # (2-1) .jar 파일을 다운로드 (v3 -> v4로 수정)
+      # (2-1) .jar 파일을 다운로드
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
