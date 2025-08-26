@@ -1,6 +1,9 @@
 package com.fourmen.meetingplatform.domain.minutes.service;
 
 import com.fourmen.meetingplatform.common.exception.CustomException;
+import com.fourmen.meetingplatform.domain.contract.entity.Contract;
+import com.fourmen.meetingplatform.domain.contract.repository.ContractRepository;
+import com.fourmen.meetingplatform.domain.document.dto.response.ContractInfoDto;
 import com.fourmen.meetingplatform.domain.meeting.entity.Meeting;
 import com.fourmen.meetingplatform.domain.meeting.repository.MeetingParticipantRepository;
 import com.fourmen.meetingplatform.domain.meeting.repository.MeetingRepository;
@@ -12,12 +15,21 @@ import com.fourmen.meetingplatform.domain.minutes.entity.Minutes;
 import com.fourmen.meetingplatform.domain.minutes.entity.MinutesType;
 import com.fourmen.meetingplatform.domain.minutes.repository.MinutesRepository;
 import com.fourmen.meetingplatform.domain.user.entity.User;
+import com.fourmen.meetingplatform.domain.user.repository.UserRepository;
+import com.fourmen.meetingplatform.domain.minutes.dto.request.ShareMinutesRequest;
+import com.fourmen.meetingplatform.domain.minutes.dto.response.SharedMinuteResponse;
+import com.fourmen.meetingplatform.domain.minutes.entity.MinutesShare;
+import com.fourmen.meetingplatform.domain.minutes.repository.MinutesShareRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -25,7 +37,10 @@ public class MinutesService {
 
     private final MinutesRepository minutesRepository;
     private final MeetingRepository meetingRepository;
+    private final MinutesShareRepository minutesShareRepository;
+    private final UserRepository userRepository;
     private final MeetingParticipantRepository meetingParticipantRepository;
+    private final ContractRepository contractRepository;
 
     @Transactional
     public MinuteSaveResponse createManualMinutes(Long meetingId, MinuteSaveRequest requestDto, User user) {
@@ -74,15 +89,70 @@ public class MinutesService {
         Minutes minutes = minutesRepository.findById(minuteId)
                 .orElseThrow(() -> new CustomException("존재하지 않는 회의록입니다.", HttpStatus.NOT_FOUND));
 
-        if (!Objects.equals(minutes.getMeeting().getId(), meetingId)) {
-            throw new CustomException("잘못된 접근입니다. 회의와 회의록 정보가 일치하지 않습니다.", HttpStatus.BAD_REQUEST);
-        }
+        Long actualMeetingId = minutes.getMeeting().getId();
 
-        boolean isParticipant = meetingParticipantRepository.existsByMeeting_IdAndUser_Id(meetingId, user.getId());
-        if (!isParticipant) {
+        boolean isParticipant = meetingParticipantRepository.existsByMeeting_IdAndUser_Id(actualMeetingId,
+                user.getId());
+        boolean isShared = minutesShareRepository.existsByMinutes_IdAndSharedWithUser_Id(minuteId, user.getId());
+
+        if (!isParticipant && !isShared) {
             throw new CustomException("회의록을 조회할 권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
 
         return MinuteDetailResponse.from(minutes);
+    }
+
+    @Transactional
+    public void shareMinutes(Long meetingId, Long minuteId, ShareMinutesRequest request, User sharer) {
+        Minutes minutes = minutesRepository.findById(minuteId)
+                .orElseThrow(() -> new CustomException("존재하지 않는 회의록입니다.", HttpStatus.NOT_FOUND));
+
+        boolean isParticipant = meetingParticipantRepository.existsByMeeting_IdAndUser_Id(minutes.getMeeting().getId(),
+                sharer.getId());
+        if (!isParticipant) {
+            throw new CustomException("공유 권한이 없습니다.", HttpStatus.FORBIDDEN);
+        }
+
+        List<User> usersToShareWith = userRepository.findAllById(request.getUserIds());
+        List<MinutesShare> shares = new ArrayList<>();
+        for (User userToShare : usersToShareWith) {
+            shares.add(MinutesShare.builder()
+                    .minutes(minutes)
+                    .sharedWithUser(userToShare)
+                    .build());
+        }
+        minutesShareRepository.saveAll(shares);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SharedMinuteResponse> getSharedMinutes(User user) {
+        List<Minutes> sharedMinutesList = minutesShareRepository.findMinutesSharedWithUser(user.getId());
+
+        if (sharedMinutesList.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<Long> minuteIds = sharedMinutesList.stream()
+                .map(Minutes::getId)
+                .collect(Collectors.toList());
+
+        List<Contract> relatedContracts = contractRepository.findByMinutes_IdIn(minuteIds);
+
+        Map<Long, List<ContractInfoDto>> contractsByMinuteId = relatedContracts.stream()
+                .collect(Collectors.groupingBy(
+                        contract -> contract.getMinutes().getId(),
+                        Collectors.mapping(contract -> ContractInfoDto.builder()
+                                .contractId(contract.getId())
+                                .title(contract.getTitle())
+                                .completedPdfUrl(contract.getCompletedPdfUrl())
+                                .build(), Collectors.toList())));
+
+        return sharedMinutesList.stream()
+                .map(minutes -> {
+                    List<ContractInfoDto> contracts = contractsByMinuteId.getOrDefault(minutes.getId(),
+                            new ArrayList<>());
+                    return SharedMinuteResponse.from(minutes, contracts);
+                })
+                .collect(Collectors.toList());
     }
 }

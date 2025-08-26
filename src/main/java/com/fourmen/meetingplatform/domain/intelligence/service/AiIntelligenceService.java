@@ -130,8 +130,7 @@ public class AiIntelligenceService {
                     "topK", 3,
                     "includeMetadata", false,
                     "includeValues", false,
-                    "filter", filter // 필터 조건 추가
-            );
+                    "filter", filter);
 
             @SuppressWarnings("unchecked")
             Map<String, Object> queryResponse = pineconeWebClient.post()
@@ -171,8 +170,7 @@ public class AiIntelligenceService {
                     "당신은 회의 내용 분석 전문가입니다. 아래의 '회의록 정보'를 바탕으로 '사용자의 질문'에 대해 간결하게 답변해주세요.\n\n" +
                             "--- 회의록 정보 ---\n%s\n\n" +
                             "--- 사용자의 질문 ---\n%s",
-                    context, userQuery
-            );
+                    context, userQuery);
 
             ChatMessage userMessage = new ChatMessage("user", prompt);
             ChatCompletionRequest request = ChatCompletionRequest.builder()

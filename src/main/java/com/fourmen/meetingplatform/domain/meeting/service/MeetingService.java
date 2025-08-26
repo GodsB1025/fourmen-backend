@@ -18,6 +18,7 @@ import com.fourmen.meetingplatform.domain.minutes.dto.response.MinuteInfoRespons
 import com.fourmen.meetingplatform.domain.minutes.entity.Minutes;
 import com.fourmen.meetingplatform.domain.minutes.entity.MinutesType;
 import com.fourmen.meetingplatform.domain.minutes.repository.MinutesRepository;
+import com.fourmen.meetingplatform.domain.nlp.dto.NlpMeetingInfo;
 import com.fourmen.meetingplatform.domain.stt.dto.UtteranceDto;
 import com.fourmen.meetingplatform.domain.stt.entity.SttRecord;
 import com.fourmen.meetingplatform.domain.stt.repository.SttRecordRepository;
@@ -25,7 +26,6 @@ import com.fourmen.meetingplatform.domain.user.entity.Role;
 import com.fourmen.meetingplatform.domain.user.entity.User;
 import com.fourmen.meetingplatform.domain.user.repository.UserRepository;
 import com.fourmen.meetingplatform.infra.gpt.service.GptService;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -59,28 +59,50 @@ public class MeetingService {
 
     @Transactional
     public MeetingResponse createMeeting(MeetingRequest request, User host) {
-        Meeting meeting = Meeting.builder()
-                .host(host)
-                .title(request.getTitle())
-                .scheduledAt(request.getScheduledAt())
-                .useAiMinutes(request.isUseAiMinutes())
-                .build();
-        Meeting savedMeeting = meetingRepository.save(meeting);
-
         List<User> participants = new ArrayList<>();
-        participants.add(host);
-
-        meetingParticipantRepository.save(new MeetingParticipant(savedMeeting, host));
-
         if (request.getParticipantEmails() != null) {
             for (String email : request.getParticipantEmails()) {
                 User participant = userRepository.findByEmail(email)
                         .orElseThrow(() -> new CustomException("참가자를 찾을 수 없습니다: " + email, HttpStatus.NOT_FOUND));
-                meetingParticipantRepository.save(new MeetingParticipant(savedMeeting, participant));
                 participants.add(participant);
             }
         }
-        calendarService.addMeetingToCalendar(savedMeeting, participants);
+        return createMeeting(request.getTitle(), request.getScheduledAt(), request.isUseAiMinutes(), participants,
+                host);
+    }
+
+    @Transactional
+    public MeetingResponse createMeetingFromNlpInfo(NlpMeetingInfo nlpMeetingInfo, User host) {
+        List<User> participants = new ArrayList<>();
+        if (nlpMeetingInfo.getParticipants() != null) {
+            for (String name : nlpMeetingInfo.getParticipants()) {
+                // 명시적 람다를 사용하여 'add' 메서드의 모호성을 해결
+                userRepository.findByName(name).ifPresent(user -> participants.add((User) user));
+            }
+        }
+        return createMeeting(nlpMeetingInfo.getTitle(), nlpMeetingInfo.getScheduledAt(), true, participants, host);
+    }
+
+    private MeetingResponse createMeeting(String title, LocalDateTime scheduledAt, boolean useAiMinutes,
+            List<User> participants, User host) {
+        Meeting meeting = Meeting.builder()
+                .host(host)
+                .title(title)
+                .scheduledAt(scheduledAt)
+                .useAiMinutes(useAiMinutes)
+                .build();
+        Meeting savedMeeting = meetingRepository.save(meeting);
+
+        List<User> allParticipants = new ArrayList<>();
+        allParticipants.add(host);
+        allParticipants.addAll(participants);
+
+        List<User> distinctParticipants = allParticipants.stream().distinct().collect(Collectors.toList());
+        for (User participant : distinctParticipants) {
+            meetingParticipantRepository.save(new MeetingParticipant(savedMeeting, participant));
+        }
+
+        calendarService.addMeetingToCalendar(savedMeeting, distinctParticipants);
 
         return MeetingResponse.from(savedMeeting);
     }
