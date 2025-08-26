@@ -11,6 +11,8 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -42,6 +44,9 @@ public class AuthService {
     private final CompanyRepository companyRepository;
     private final VicolloClient vicolloClient;
     private final RedisService redisService;
+
+    @Value("${domain.url}")
+    private String domain;
 
     @Transactional
     public SignUpResponse signUp(SignUpRequest signUpRequest) {
@@ -156,6 +161,8 @@ public class AuthService {
                 .httpOnly(httpOnly)
                 .secure(true)
                 .path("/")
+                .sameSite("None")
+                .domain(domain)
                 .maxAge(maxAge)
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
