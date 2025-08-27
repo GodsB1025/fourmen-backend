@@ -30,7 +30,7 @@ public class WebSocketConfig implements WebSocketConfigurer, WebSocketMessageBro
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws/chat")
-                .setAllowedOrigins("http://localhost:5173")
+                .setAllowedOrigins("http://localhost:5173", "https://kr1-api-object-storage.nhncloudservice.com")
                 .addInterceptors(handshakeInterceptor())
                 .withSockJS();
     }
