@@ -171,7 +171,7 @@ public class AuthService {
         ResponseCookie cookie = ResponseCookie.from(name, "")
                 .httpOnly(true)
                 .secure(true)
-                .domain("kr1-api-object-storage.nhncloudservice.com")
+                .domain(domain)
                 .path("/")
                 .maxAge(0)
                 .build();
