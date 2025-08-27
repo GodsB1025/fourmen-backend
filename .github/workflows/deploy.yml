@@ -1,13 +1,15 @@
+# GitHub Actions 워크플로우 이름
 name: Deploy Backend to NHN Cloud (Build and Deploy)
 
+# 워크플로우 실행 조건: main 브랜치에 push 될 때
 on:
   push:
     branches:
-      - main # main 브랜치에 push 될 때마다 실행
+      - main
 
 jobs:
   # ===============================================================
-  # 1. Build Job: GitHub 서버에서 소스코드를 빌드하여 .jar 파일을 생성
+  # 1. Build Job: 소스코드를 빌드하여 .jar 파일을 생성
   # ===============================================================
   build:
     runs-on: ubuntu-latest
@@ -23,15 +25,15 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       
-      # (1-3) (⭐️핵심 해결책) mvnw 파일에 실행 권한 부여
+      # (1-3) mvnw 파일에 실행 권한 부여
       - name: Grant execute permission to mvnw
         run: chmod +x ./mvnw
 
-      # (1-4) Maven 빌드 실행
+      # (1-4) Maven 빌드 실행 (테스트는 생략)
       - name: Build with Maven
         run: ./mvnw clean package -DskipTests
 
-      # (1-5) 빌드된 .jar 파일을 Artifact로 업로드
+      # (1-5) 빌드된 .jar 파일을 Artifact로 업로드하여 deploy job에서 사용
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -43,9 +45,9 @@ jobs:
   # ===============================================================
   deploy:
     runs-on: ubuntu-latest
-    needs: build
+    needs: build # build job이 성공해야 실행됨
     steps:
-      # (2-1) .jar 파일을 다운로드
+      # (2-1) build job에서 업로드한 .jar 파일을 다운로드
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
@@ -61,7 +63,7 @@ jobs:
           source: "*.jar"
           target: "/home/ubuntu/fourmen-backend"
 
-      # (2-3) SSH로 서버에 접속해서 앱을 강제 종료 후 실행
+      # (2-3) SSH로 서버에 접속해서 앱을 강제 종료 후 환경 변수와 함께 실행
       - name: Deploy to NHN Cloud via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -71,25 +73,38 @@ jobs:
           script: |
             cd /home/ubuntu/fourmen-backend
 
-            # 1. 실행중인 jar 파일의 프로세스 ID(PID)를 직접 찾습니다.
-            # `grep -v grep`은 grep 명령어 자체는 검색에서 제외하는 역할입니다.
+            # 1. 실행중인 jar 파일의 프로세스 ID(PID)를 찾아서 강제 종료
             PID=$(ps -ef | grep 'java -jar' | grep -v grep | awk '{print $2}')
-
-            # 2. PID가 존재한다면(앱이 실행중이라면), kill -9 명령어로 강제 종료시킵니다.
             if [ -n "$PID" ]; then
-              echo "Found running process with PID: $PID. Force killing it with kill -9."
+              echo "Found running process with PID: $PID. Force killing it."
               sudo kill -9 $PID
-              sleep 5 # OS가 포트를 완전히 해제할 시간을 줍니다.
+              sleep 5 # 포트가 완전히 해제될 때까지 대기
             else
-              echo "No running process found. Skipping kill command."
+              echo "No running process found."
             fi
 
-            # 3. 새 버전의 앱을 실행합니다.
+            # 2. ⭐️ GitHub Secrets를 서버의 환경 변수로 설정
+            export DB_USERNAME=${{ secrets.DB_USERNAME }}
+            export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            export JWT_SECRET=${{ secrets.JWT_SECRET }}
+            export MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
+            export MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
+            export VICOLLO_APP_ID=${{ secrets.VICOLLO_APP_ID }}
+            export VICOLLO_APP_SECRET=${{ secrets.VICOLLO_APP_SECRET }}
+            export EFORMSIGN_API_KEY=${{ secrets.EFORMSIGN_API_KEY }}
+            export EFORMSIGN_API_MEMBER=${{ secrets.EFORMSIGN_API_MEMBER }}
+            export EFORMSIGN_API_SIGNATURE=${{ secrets.EFORMSIGN_API_SIGNATURE }}
+            export GPT_API_KEY=${{ secrets.GPT_API_KEY }}
+            export PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}
+            export PINECONE_HOST=${{ secrets.PINECONE_HOST }}
+            export DOMAIN_URL=${{ secrets.DOMAIN_URL }}
+
+            # 3. 환경 변수가 설정된 상태로 새 버전의 앱을 백그라운드로 실행
             echo "Starting new application..."
             setsid java -jar *.jar > app.log 2>&1 &
 
-            # 4. (디버깅) 앱이 정상 실행되었는지 로그를 확인합니다.
-            sleep 10 # 앱이 시작될 시간을 충분히 줍니다.
+            # 4. 앱이 정상 실행되었는지 로그를 확인 (디버깅용)
+            sleep 10 # 앱이 시작될 시간을 충분히 대기
             echo "====== Displaying new app.log to check status ======"
             cat app.log
             echo "====================================================="

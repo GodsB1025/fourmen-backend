@@ -82,8 +82,10 @@ public class SecurityConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "http://133.186.229.16",
-                "https://133.186.229.16", "https://kr1-api-object-storage.nhncloudservice.com"));
+        configuration.setAllowedOriginPatterns(Arrays.asList(
+                "https://*.nhncloudservice.com",
+                "http://localhost:5173"
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
