@@ -158,7 +158,7 @@ public class AuthService {
     private void addTokenToCookie(HttpServletResponse response, String name, String value, int maxAge,
             boolean httpOnly) {
         ResponseCookie cookie = ResponseCookie.from(name, value)
-                .httpOnly(httpOnly)
+                .httpOnly(true)
                 .secure(true)
                 .path("/")
                 .sameSite("None")
@@ -171,6 +171,7 @@ public class AuthService {
         ResponseCookie cookie = ResponseCookie.from(name, "")
                 .httpOnly(true)
                 .secure(true)
+                .domain("kr1-api-object-storage.nhncloudservice.com")
                 .path("/")
                 .maxAge(0)
                 .build();
