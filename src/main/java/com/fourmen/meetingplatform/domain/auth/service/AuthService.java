@@ -110,7 +110,7 @@ public class AuthService {
         addTokenToCookie(response, "refreshToken", refreshToken, 60 * 60 * 24 * 7, true);
         addTokenToCookie(response, "XSRF-TOKEN", csrfToken, 60 * 60 * 24 * 7, false);
 
-        return LoginResponse.from(user);
+        return LoginResponse.from(user, csrfToken);
     }
 
     @Transactional
@@ -162,7 +162,6 @@ public class AuthService {
                 .secure(true)
                 .path("/")
                 .sameSite("None")
-                .domain("kr1-api-object-storage.nhncloudservice.com")
                 .maxAge(maxAge)
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
@@ -172,7 +171,7 @@ public class AuthService {
         ResponseCookie cookie = ResponseCookie.from(name, "")
                 .httpOnly(true)
                 .secure(true)
-                .domain("kr1-api-object-storage.nhncloudservice.com")
+                .domain(domain)
                 .path("/")
                 .maxAge(0)
                 .build();
