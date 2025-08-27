@@ -162,7 +162,7 @@ public class AuthService {
                 .secure(true)
                 .path("/")
                 .sameSite("None")
-                .domain("nhncloudservice.com")
+                .domain("kr1-api-object-storage.nhncloudservice.com")
                 .maxAge(maxAge)
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
