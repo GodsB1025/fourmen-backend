@@ -45,12 +45,11 @@ public class AuthService {
     private final VicolloClient vicolloClient;
     private final RedisService redisService;
 
-    @Value("${domain.url}")
+    @Value("${domain.url:#{null}}") // 설정이 없으면 null을 주입
     private String domain;
 
     @Transactional
     public SignUpResponse signUp(SignUpRequest signUpRequest) {
-
         String isVerified = redisService.getData("VERIFIED:" + signUpRequest.getEmail());
         if (isVerified == null || !isVerified.equals("true")) {
             throw new CustomException("이메일 인증이 필요합니다.", HttpStatus.BAD_REQUEST);
@@ -156,25 +155,35 @@ public class AuthService {
     }
 
     private void addTokenToCookie(HttpServletResponse response, String name, String value, int maxAge,
-            boolean httpOnly) {
-        ResponseCookie cookie = ResponseCookie.from(name, value)
+                                  boolean httpOnly) {
+        // --- 👇 수정된 부분 ---
+        ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie.from(name, value)
                 .httpOnly(httpOnly)
                 .secure(true)
                 .path("/")
                 .sameSite("None")
-                .domain(domain)
-                .maxAge(maxAge)
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+                .maxAge(maxAge);
+
+        // domain 값이 존재하고, 비어있지 않을 때만 도메인 속성을 추가
+        if (domain != null && !domain.trim().isEmpty()) {
+            cookieBuilder.domain(domain);
+        }
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookieBuilder.build().toString());
+        // --- 👆 수정된 부분 ---
     }
 
     private void expireCookie(HttpServletResponse response, String name) {
-        ResponseCookie cookie = ResponseCookie.from(name, "")
+        ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie.from(name, "")
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
-                .maxAge(0)
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+                .maxAge(0);
+
+        if (domain != null && !domain.trim().isEmpty()) {
+            cookieBuilder.domain(domain);
+        }
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookieBuilder.build().toString());
     }
 }
