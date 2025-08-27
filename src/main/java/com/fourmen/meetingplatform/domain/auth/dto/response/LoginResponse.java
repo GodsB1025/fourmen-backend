@@ -14,8 +14,9 @@ public class LoginResponse {
     private String email;
     private Role role;
     private CompanyResponse company;
+    private String csrfToken;
 
-    public static LoginResponse from(User user) {
+    public static LoginResponse from(User user, String csrfToken) {
         CompanyResponse companyResponse = (user.getCompany() != null)
                 ? CompanyResponse.from(user.getCompany())
                 : null;
@@ -26,6 +27,7 @@ public class LoginResponse {
                 .email(user.getEmail())
                 .role(user.getRole())
                 .company(companyResponse)
+                .csrfToken(csrfToken)
                 .build();
     }
 }
