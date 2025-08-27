@@ -171,7 +171,7 @@ public class AuthService {
         ResponseCookie cookie = ResponseCookie.from(name, "")
                 .httpOnly(true)
                 .secure(true)
-                .domain(domain)
+                .sameSite("None")
                 .path("/")
                 .maxAge(0)
                 .build();
