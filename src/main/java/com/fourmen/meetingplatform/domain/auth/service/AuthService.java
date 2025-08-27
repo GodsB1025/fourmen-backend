@@ -45,9 +45,6 @@ public class AuthService {
     private final VicolloClient vicolloClient;
     private final RedisService redisService;
 
-    @Value("${domain.url}")
-    private String domain;
-
     @Transactional
     public SignUpResponse signUp(SignUpRequest signUpRequest) {
 
@@ -162,7 +159,6 @@ public class AuthService {
                 .secure(true)
                 .path("/")
                 .sameSite("None")
-                .domain(domain)
                 .maxAge(maxAge)
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
