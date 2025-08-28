@@ -1,5 +1,7 @@
 package com.fourmen.meetingplatform.domain.document.dto.response;
 
+import com.fourmen.meetingplatform.domain.contract.entity.ContractStatus;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -13,4 +15,5 @@ public class ContractInfoDto {
     private Long contractId;
     private String title;
     private String completedPdfUrl;
+    private ContractStatus status;
 }

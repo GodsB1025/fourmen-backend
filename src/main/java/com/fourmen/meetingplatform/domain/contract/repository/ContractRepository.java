@@ -11,11 +11,11 @@ import java.util.Optional;
 public interface ContractRepository extends JpaRepository<Contract, Long> {
 
     @Query("SELECT DISTINCT c FROM Contract c " +
-            "JOIN c.minutes m " +
-            "JOIN m.meeting mt " +
-            "JOIN mt.participants p " +
-            "WHERE p.user.id = :userId AND c.status = com.fourmen.meetingplatform.domain.contract.entity.ContractStatus.COMPLETED "
-            +
+            "LEFT JOIN c.minutes m " +
+            "LEFT JOIN m.meeting mt " +
+            "LEFT JOIN mt.participants p " +
+            "WHERE c.status = com.fourmen.meetingplatform.domain.contract.entity.ContractStatus.COMPLETED " +
+            "AND (c.sender.id = :userId OR p.user.id = :userId) " +
             "ORDER BY c.createdAt DESC")
     List<Contract> findCompletedContractsByUserId(@Param("userId") Long userId);
 

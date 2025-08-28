@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+import com.fourmen.meetingplatform.domain.contract.entity.ContractStatus;
+
 @Getter
 @Builder
 @NoArgsConstructor
@@ -16,4 +18,5 @@ public class StandaloneContractDto {
     private String title;
     private LocalDateTime createdAt;
     private String completedPdfUrl;
+    private ContractStatus status;
 }

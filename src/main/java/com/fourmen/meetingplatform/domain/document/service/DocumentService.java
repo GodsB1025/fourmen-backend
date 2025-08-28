@@ -1,5 +1,6 @@
 package com.fourmen.meetingplatform.domain.document.service;
 
+import com.fourmen.meetingplatform.domain.contract.entity.ContractStatus;
 import com.fourmen.meetingplatform.domain.document.dto.response.ContractInfoDto;
 import com.fourmen.meetingplatform.domain.document.dto.response.DocumentResponseDto;
 import com.fourmen.meetingplatform.domain.document.dto.response.MeetingInfoDto;
@@ -57,6 +58,9 @@ public class DocumentService {
             Long contractId = row[5] != null ? ((Number) row[5]).longValue() : null;
             String contractTitle = (String) row[6];
             String completedPdfUrl = (String) row[7];
+            String contractStatusStr = (String) row[8];
+            ContractStatus contractStatus = contractStatusStr != null ? ContractStatus.valueOf(contractStatusStr)
+                    : null;
 
             MeetingInfoDto meetingInfo = meetingsByDate
                     .computeIfAbsent(meetingDate, k -> new LinkedHashMap<>())
@@ -85,6 +89,7 @@ public class DocumentService {
                             .contractId(contractId)
                             .title(contractTitle)
                             .completedPdfUrl(completedPdfUrl)
+                            .status(contractStatus)
                             .build());
                 }
             }
@@ -99,12 +104,17 @@ public class DocumentService {
 
         List<Object[]> standaloneResults = documentRepository.findStandaloneContracts(user.getId(), startDate, endDate);
         List<StandaloneContractDto> standaloneContracts = standaloneResults.stream()
-                .map(row -> StandaloneContractDto.builder()
-                        .contractId(((Number) row[0]).longValue())
-                        .title((String) row[1])
-                        .createdAt(((Timestamp) row[2]).toLocalDateTime())
-                        .completedPdfUrl((String) row[3])
-                        .build())
+                .map(row -> {
+                    String statusStr = (String) row[4];
+                    ContractStatus status = statusStr != null ? ContractStatus.valueOf(statusStr) : null;
+                    return StandaloneContractDto.builder()
+                            .contractId(((Number) row[0]).longValue())
+                            .title((String) row[1])
+                            .createdAt(((Timestamp) row[2]).toLocalDateTime())
+                            .completedPdfUrl((String) row[3])
+                            .status(status)
+                            .build();
+                })
                 .collect(Collectors.toList());
 
         return DocumentResponseDto.builder()
