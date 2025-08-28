@@ -39,14 +39,7 @@ public class EformSignWebhookRequestDto {
         private String documentId;
 
         @JsonProperty("export_ready_list")
-        private List<ExportReadyItem> exportReadyList;
+        private List<String> exportReadyList;
     }
 
-    @Getter
-    @NoArgsConstructor
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class ExportReadyItem {
-        @JsonProperty("file_url")
-        private String fileUrl;
-    }
 }

@@ -110,6 +110,12 @@ public class ContractService {
     private void handlePdfReady(EformSignWebhookRequestDto.PdfReadyEvent event) {
         log.info("PDF 생성 완료 이벤트 처리 시작: Document ID - {}", event.getDocumentId());
 
+        if (event.getExportReadyList() == null || !event.getExportReadyList().contains("document")) {
+            log.warn("PDF 준비 완료 이벤트 수신했으나, export_ready_list에 'document'가 없어 처리를 건너뜁니다. Document ID: {}",
+                    event.getDocumentId());
+            return;
+        }
+
         contractRepository.findByEformsignDocumentId(event.getDocumentId())
                 .ifPresent(contract -> {
                     String accessToken = eformSignTokenService.getAccessToken();
