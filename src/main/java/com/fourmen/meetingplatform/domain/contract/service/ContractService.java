@@ -22,7 +22,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import java.nio.file.StandardCopyOption; // 추가
 import org.springframework.transaction.annotation.Propagation;
 
 import java.io.IOException;
@@ -113,7 +112,8 @@ public class ContractService {
         log.info("PDF 생성 완료 이벤트 처리 시작: Document ID - {}", event.getDocumentId());
 
         if (event.getExportReadyList() == null || !event.getExportReadyList().contains("document")) {
-            log.warn("PDF 준비 완료 이벤트 수신했으나, export_ready_list에 'document'가 없어 처리를 건너뜁니다. Document ID: {}", event.getDocumentId());
+            log.warn("PDF 준비 완료 이벤트 수신했으나, export_ready_list에 'document'가 없어 처리를 건너뜁니다. Document ID: {}",
+                    event.getDocumentId());
             return;
         }
 
@@ -122,12 +122,10 @@ public class ContractService {
                     String accessToken = eformSignTokenService.getAccessToken();
                     String cleanTitle = StringUtils.cleanPath(contract.getTitle().replaceAll("[^a-zA-Z0-9가-힣]", "_"));
                     String timestamp = contract.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-                    // 1. 파일 이름에서 확장자(.pdf)를 분리하여 관리합니다.
                     String fileName = String.format("contract_%s_%s", cleanTitle, timestamp);
 
                     eformSignApiClient.downloadFile(accessToken, event.getDocumentId(), fileName + ".pdf")
                             .doOnSuccess(pdfBytes -> {
-                                // 2. 파일 저장 및 DB 업데이트 로직을 별도의 트랜잭션 메서드로 호출합니다.
                                 savePdfAndUpdateContract(contract.getId(), pdfBytes, fileName);
                             })
                             .doOnError(error -> log.error("PDF 다운로드 실패: Contract ID - {}", contract.getId(), error))
@@ -135,12 +133,9 @@ public class ContractService {
                 });
     }
 
-    // 3. 파일 저장 및 DB 업데이트를 위한 새로운 public @Transactional 메서드 추가
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void savePdfAndUpdateContract(Long contractId, byte[] pdfBytes, String fileName) {
         try {
-            // 4. 파일을 저장할 디렉토리를 지정하고, 없으면 생성합니다.
-            //    운영 환경을 고려하여 실행 파일 외부 경로를 사용하는 것이 더 안정적일 수 있습니다.
             Path directory = Paths.get("src/main/resources/static/images/contracts");
             if (Files.notExists(directory)) {
                 Files.createDirectories(directory);
@@ -148,15 +143,12 @@ public class ContractService {
             Path filePath = directory.resolve(fileName + ".pdf");
             Files.write(filePath, pdfBytes);
 
-            // 5. DB에 저장할 상대 경로를 생성합니다.
             String relativePath = "/images/contracts/" + fileName;
 
-            // 6. ID를 통해 Contract 엔티티를 다시 조회하여 업데이트합니다.
             Contract contract = contractRepository.findById(contractId)
                     .orElseThrow(() -> new RuntimeException("Contrato no encontrado: " + contractId));
 
             contract.updatePdfUrl(relativePath);
-            // 7. 변경 사항을 명시적으로 저장하여 DB에 즉시 반영되도록 합니다.
             contractRepository.save(contract);
 
             log.info("계약서 PDF 저장 및 경로 업데이트 완료: Contract ID - {}, Path - {}", contract.getId(), relativePath);
