@@ -109,7 +109,6 @@ public class EformSignApiClient {
                 return webClient.get()
                                 .uri(downloadUrl)
                                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                                .accept(MediaType.APPLICATION_PDF)
                                 .retrieve()
                                 .bodyToMono(byte[].class);
         }
