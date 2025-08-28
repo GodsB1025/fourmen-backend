@@ -24,6 +24,14 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+      # ⭐️ (1-3) Google Credentials JSON 파일 생성 (핵심 변경사항) ⭐️
+      # GitHub Secret에 저장된 JSON 내용을 실제 파일로 생성합니다.
+      # 이 단계는 Maven 빌드 전에 실행되어야 .jar 파일에 포함됩니다.
+      - name: Make Google Credentials JSON File
+        run: |
+          mkdir -p src/main/resources
+          echo "${{ secrets.GCP_CREDENTIALS_JSON }}" | base64 --decode > src/main/resources/endless-theorem-398903-734ec30d3fa5.json
+      
       
       # (1-3) mvnw 파일에 실행 권한 부여
       - name: Grant execute permission to mvnw
