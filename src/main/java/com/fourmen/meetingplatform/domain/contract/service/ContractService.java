@@ -21,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 import org.springframework.transaction.annotation.Propagation;
 
 import java.io.IOException;
@@ -120,9 +119,8 @@ public class ContractService {
         contractRepository.findByEformsignDocumentId(event.getDocumentId())
                 .ifPresent(contract -> {
                     String accessToken = eformSignTokenService.getAccessToken();
-                    String cleanTitle = StringUtils.cleanPath(contract.getTitle().replaceAll("[^a-zA-Z0-9가-힣]", "_"));
                     String timestamp = contract.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-                    String fileName = String.format("contract_%s_%s", cleanTitle, timestamp);
+                    String fileName = String.format("contract_%d_%s", contract.getId(), timestamp);
 
                     eformSignApiClient.downloadFile(accessToken, event.getDocumentId(), fileName + ".pdf")
                             .doOnSuccess(pdfBytes -> {
