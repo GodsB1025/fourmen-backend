@@ -96,7 +96,6 @@ public class EformSignApiClient {
                                 .block();
         }
 
-        // PDF 다운로드 메서드 수정
         public Mono<byte[]> downloadFile(String accessToken, String documentId, String fileName) {
                 String downloadUrl = UriComponentsBuilder.fromUriString(apiBaseUrl)
                                 .path("/api/documents/{documentId}/download_files")
@@ -110,8 +109,8 @@ public class EformSignApiClient {
                 return webClient.get()
                                 .uri(downloadUrl)
                                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                                .accept(MediaType.APPLICATION_OCTET_STREAM)
+                                .accept(MediaType.APPLICATION_PDF)
                                 .retrieve()
-                                .bodyToMono(byte[].class); // bodyToMono(byte[].class)로 직접 변환
+                                .bodyToMono(byte[].class);
         }
 }
