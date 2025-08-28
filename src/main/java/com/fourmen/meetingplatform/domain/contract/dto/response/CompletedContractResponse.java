@@ -13,6 +13,7 @@ public class CompletedContractResponse {
     private String title;
     private LocalDateTime completedAt;
     private String fileUrlBase;
+    private String previewImageUrl;
 
     public static CompletedContractResponse from(Contract contract) {
         return CompletedContractResponse.builder()
@@ -20,6 +21,7 @@ public class CompletedContractResponse {
                 .title(contract.getTitle())
                 .completedAt(contract.getCreatedAt())
                 .fileUrlBase(contract.getCompletedPdfUrl())
+                .previewImageUrl(contract.getTemplate().getPreviewImageUrl())
                 .build();
     }
 }
