@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ContractRepository extends JpaRepository<Contract, Long> {
 
@@ -19,4 +20,6 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
     List<Contract> findCompletedContractsByUserId(@Param("userId") Long userId);
 
     List<Contract> findByMinutes_IdIn(List<Long> minuteIds);
+
+    Optional<Contract> findByEformsignDocumentId(String eformsignDocumentId);
 }

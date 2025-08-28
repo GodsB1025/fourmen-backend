@@ -62,4 +62,12 @@ public class Contract {
         this.status = status;
         this.completedPdfUrl = completedPdfUrl;
     }
+
+    public void setCompleted() {
+        this.status = ContractStatus.COMPLETED;
+    }
+
+    public void updatePdfUrl(String pdfUrl) {
+        this.completedPdfUrl = pdfUrl;
+    }
 }

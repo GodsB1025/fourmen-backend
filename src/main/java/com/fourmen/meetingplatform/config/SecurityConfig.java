@@ -38,7 +38,8 @@ public class SecurityConfig {
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/images/**",
-            "/ws/**"
+            "/ws/**",
+            "/webhooks/**"
     };
 
     @Bean
@@ -84,8 +85,7 @@ public class SecurityConfig {
 
         configuration.setAllowedOriginPatterns(Arrays.asList(
                 "https://kr1-api-object-storage.nhncloudservice.com",
-                "http://localhost:5173"
-        ));
+                "http://localhost:5173"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

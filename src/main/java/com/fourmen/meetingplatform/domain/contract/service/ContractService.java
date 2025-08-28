@@ -2,6 +2,7 @@ package com.fourmen.meetingplatform.domain.contract.service;
 
 import com.fourmen.meetingplatform.common.exception.CustomException;
 import com.fourmen.meetingplatform.domain.contract.dto.request.ContractSendRequestDto;
+import com.fourmen.meetingplatform.domain.contract.dto.request.EformSignWebhookRequestDto;
 import com.fourmen.meetingplatform.domain.contract.dto.response.CompletedContractResponse;
 import com.fourmen.meetingplatform.domain.contract.entity.Contract;
 import com.fourmen.meetingplatform.domain.contract.entity.ContractStatus;
@@ -16,14 +17,21 @@ import com.fourmen.meetingplatform.infra.eformsign.EformSignApiClient;
 import com.fourmen.meetingplatform.infra.eformsign.dto.response.EformSignSendResponse;
 import com.fourmen.meetingplatform.infra.eformsign.service.EformSignTokenService;
 import lombok.RequiredArgsConstructor;
-
-import java.util.List;
-import java.util.stream.Collectors;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ContractService {
@@ -36,7 +44,6 @@ public class ContractService {
 
     @Transactional
     public void createAndSendContract(String templateId, Long minutesId, ContractSendRequestDto requestDto, User user) {
-
         if (user.getRole() != Role.ADMIN && user.getRole() != Role.CONTRACT_ADMIN) {
             throw new CustomException("계약서를 발송할 권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
@@ -76,5 +83,66 @@ public class ContractService {
         return contracts.stream()
                 .map(CompletedContractResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void processWebhook(EformSignWebhookRequestDto requestDto) {
+        log.info("eformsign 웹훅 수신: Webhook ID - {}, Event Type - {}", requestDto.getWebhookId(),
+                requestDto.getEventType());
+
+        if ("document".equals(requestDto.getEventType()) && requestDto.getDocument() != null
+                && "doc_complete".equals(requestDto.getDocument().getStatus())) {
+            handleDocumentComplete(requestDto.getDocument());
+        } else if ("ready_document_pdf".equals(requestDto.getEventType()) && requestDto.getReadyDocumentPdf() != null) {
+            handlePdfReady(requestDto.getReadyDocumentPdf());
+        }
+    }
+
+    private void handleDocumentComplete(EformSignWebhookRequestDto.DocumentEvent event) {
+        log.info("문서 완료 이벤트 처리 시작: Document ID - {}", event.getId());
+        contractRepository.findByEformsignDocumentId(event.getId())
+                .ifPresent(contract -> {
+                    contract.setCompleted();
+                    log.info("계약서 상태 'COMPLETED'로 업데이트 완료: Contract ID - {}", contract.getId());
+                });
+    }
+
+    private void handlePdfReady(EformSignWebhookRequestDto.PdfReadyEvent event) {
+        log.info("PDF 생성 완료 이벤트 처리 시작: Document ID - {}", event.getDocumentId());
+
+        contractRepository.findByEformsignDocumentId(event.getDocumentId())
+                .ifPresent(contract -> {
+                    String accessToken = eformSignTokenService.getAccessToken();
+                    String cleanTitle = StringUtils.cleanPath(contract.getTitle().replaceAll("[^a-zA-Z0-9가-힣]", "_"));
+                    String timestamp = contract.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+                    String fileNameWithExt = String.format("contract_%s_%s.pdf", cleanTitle, timestamp);
+
+                    eformSignApiClient.downloadFile(accessToken, event.getDocumentId(), fileNameWithExt)
+                            .doOnSuccess(pdfBytes -> {
+                                try {
+                                    Path directory = Paths.get("src/main/resources/static/images/contracts");
+                                    if (Files.notExists(directory)) {
+                                        Files.createDirectories(directory);
+                                    }
+                                    Path filePath = directory.resolve(fileNameWithExt);
+                                    Files.write(filePath, pdfBytes);
+
+                                    String fileNameWithoutExt = fileNameWithExt.substring(0,
+                                            fileNameWithExt.lastIndexOf('.'));
+                                    String relativePath = "/images/contracts/" + fileNameWithoutExt;
+
+                                    contract.updatePdfUrl(relativePath);
+
+                                    log.info("계약서 PDF 저장 및 경로 업데이트 완료: Contract ID - {}, Path - {}", contract.getId(),
+                                            relativePath);
+
+                                } catch (IOException e) {
+                                    log.error("PDF 파일 저장 실패: Contract ID - {}", contract.getId(), e);
+                                    throw new RuntimeException("PDF 파일 저장에 실패했습니다.", e);
+                                }
+                            })
+                            .doOnError(error -> log.error("PDF 다운로드 실패: Contract ID - {}", contract.getId(), error))
+                            .subscribe();
+                });
     }
 }
