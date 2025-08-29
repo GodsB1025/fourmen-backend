@@ -19,6 +19,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -72,8 +74,13 @@ public class AiIntelligenceService {
                 }
 
                 String vectorId = UUID.randomUUID().toString();
+                String meetingDate = minutes.getMeeting().getScheduledAt()
+                        .format(DateTimeFormatter.ISO_LOCAL_DATE);
 
-                Map<String, Object> metadata = Map.of("meetingId", minutes.getMeeting().getId().toString());
+                Map<String, Object> metadata = Map.of(
+                        "meetingId", minutes.getMeeting().getId().toString(),
+                        "scheduledAt", meetingDate
+                );
 
                 Map<String, Object> vectorData = new HashMap<>();
                 vectorData.put("id", vectorId);
@@ -121,7 +128,7 @@ public class AiIntelligenceService {
             }
             List<String> meetingIdStrings = accessibleMeetingIds.stream()
                     .map(String::valueOf)
-                    .collect(Collectors.toList());
+                    .toList();
 
             Map<String, Object> filter = Map.of("meetingId", Map.of("$in", meetingIdStrings));
 
@@ -163,14 +170,21 @@ public class AiIntelligenceService {
 
             List<MeetingIntelligence> searchResults = intelligenceRepository.findAllById(similarVectorIds);
             String context = searchResults.stream()
-                    .map(MeetingIntelligence::getTextChunk)
+                    .map(result -> {
+                        String meetingDate = result.getMinutes().getMeeting().getScheduledAt()
+                                .format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일"));
+                        return String.format("[회의 날짜: %s]\n%s", meetingDate, result.getTextChunk());
+                    })
                     .collect(Collectors.joining("\n\n---\n\n"));
 
+            String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일"));
             String prompt = String.format(
-                    "당신은 회의 내용 분석 전문가입니다. 아래의 '회의록 정보'를 바탕으로 '사용자의 질문'에 대해 간결하게 답변해주세요.\n\n" +
+                    "당신은 회의 내용 분석 및 날짜 계산 전문가입니다. '오늘'은 %s입니다.\n" +
+                            "아래의 '회의록 정보'를 바탕으로 '사용자의 질문'에 대해 간결하게 답변해주세요.\n" +
+                            "특히 '어제', '오늘', '그저께' 등 상대적인 날짜 표현이 나오면 오늘 날짜를 기준으로 정확히 계산하여 답변해야 합니다.\n\n" +
                             "--- 회의록 정보 ---\n%s\n\n" +
                             "--- 사용자의 질문 ---\n%s",
-                    context, userQuery);
+                    today, context, userQuery);
 
             ChatMessage userMessage = new ChatMessage("user", prompt);
             ChatCompletionRequest request = ChatCompletionRequest.builder()
