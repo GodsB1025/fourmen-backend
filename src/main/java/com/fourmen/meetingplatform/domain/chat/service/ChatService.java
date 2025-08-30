@@ -98,7 +98,7 @@ public class ChatService {
         });
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ChatRoomResponse> getUserChatRooms(User user) {
         findOrCreateCompanyChatRoom(user);
 
