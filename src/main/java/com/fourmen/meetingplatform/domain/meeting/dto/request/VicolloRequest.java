@@ -81,7 +81,7 @@ public class VicolloRequest {
 
         public static Header defaultHeader() {
             return Header.builder()
-                    .logo(Logo.builder().visible(true).url("").build())
+                    .logo(Logo.builder().visible(false).url("string").build())
                     .title(VisibleItem.builder().visible(false).build())
                     .userCount(VisibleItem.builder().visible(true).build())
                     .currentTime(VisibleItem.builder().visible(true).build())
