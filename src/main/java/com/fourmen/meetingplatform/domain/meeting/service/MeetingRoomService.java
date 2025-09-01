@@ -12,6 +12,7 @@ import com.fourmen.meetingplatform.domain.meeting.repository.MeetingRepository;
 import com.fourmen.meetingplatform.domain.user.entity.User;
 import com.fourmen.meetingplatform.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,9 @@ public class MeetingRoomService {
         private final UserRepository userRepository;
         private final VicolloClient vicolloClient;
         private final MeetingParticipantRepository meetingParticipantRepository;
+
+        @Value("${domain.url}")
+        private String domainUrl;
 
         @Transactional
         public void createOrUpdateVicolloMember(String userEmail) {
@@ -47,6 +51,21 @@ public class MeetingRoomService {
                 if (!meeting.getHost().getId().equals(user.getId())) {
                         throw new CustomException("회의 호스트만 화상회의를 시작할 수 있습니다.", HttpStatus.FORBIDDEN);
                 }
+                VicolloRequest.Header headerWithOptions = VicolloRequest.Header.defaultHeader();
+
+                headerWithOptions.setLogo(
+                        VicolloRequest.Logo.builder()
+                                .visible(true)
+                                .url(domainUrl + "/images/logo/favicon.svg") // URL 설정
+                                .build()
+                );
+
+                VicolloRequest.ViewOptions viewOptions = VicolloRequest.ViewOptions.builder()
+                        .theme(VicolloRequest.Theme.builder().color("dark").build())
+                        .header(headerWithOptions)
+                        .sideBar(VicolloRequest.SideBar.builder().visible(true).build())
+                        .controls(VicolloRequest.Controls.defaultControls())
+                        .build();
 
                 VicolloRequest.CreateRoom vicolloRequest = VicolloRequest.CreateRoom.builder()
                                 .appUserId(user.getId().toString())
@@ -55,7 +74,7 @@ public class MeetingRoomService {
                                 .password(request.getPassword())
                                 .manuallyApproval(true)
                                 .canAutoRoomCompositeRecording(true)
-                                .viewOptions(VicolloRequest.ViewOptions.defaultOptions())
+                                .viewOptions(viewOptions)
                                 .build();
 
                 if (request.getScheduledAt() != null) {
