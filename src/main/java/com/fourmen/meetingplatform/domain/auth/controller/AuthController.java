@@ -3,6 +3,7 @@ package com.fourmen.meetingplatform.domain.auth.controller;
 import com.fourmen.meetingplatform.common.response.ApiResponseMessage;
 import com.fourmen.meetingplatform.domain.auth.dto.request.LoginRequest;
 import com.fourmen.meetingplatform.domain.auth.dto.response.LoginResponse;
+import com.fourmen.meetingplatform.domain.auth.dto.response.RefreshTokenResponse;
 import com.fourmen.meetingplatform.domain.auth.dto.response.SignUpResponse;
 import com.fourmen.meetingplatform.domain.auth.service.AuthService;
 
@@ -43,8 +44,8 @@ public class AuthController {
     @Operation(summary = "액세스 토큰 재발급", description = "유효한 Refresh 토큰을 사용하여 새로운 Access 토큰을 재발급")
     @PostMapping("/refresh")
     @ApiResponseMessage("액세스 토큰 재발급 성공")
-    public void refreshToken(HttpServletRequest request, HttpServletResponse response) {
-        authService.refreshToken(request, response);
+    public RefreshTokenResponse refreshToken(HttpServletRequest request, HttpServletResponse response) {
+        return authService.refreshToken(request, response);
     }
 
     @Operation(summary = "로그아웃", description = "사용자의 Refresh 토큰을 만료시키고 쿠키를 삭제")

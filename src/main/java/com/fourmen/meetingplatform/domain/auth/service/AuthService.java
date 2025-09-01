@@ -3,6 +3,7 @@ package com.fourmen.meetingplatform.domain.auth.service;
 import com.fourmen.meetingplatform.config.jwt.JwtTokenProvider;
 import com.fourmen.meetingplatform.domain.auth.dto.request.LoginRequest;
 import com.fourmen.meetingplatform.domain.auth.dto.response.LoginResponse;
+import com.fourmen.meetingplatform.domain.auth.dto.response.RefreshTokenResponse;
 import com.fourmen.meetingplatform.domain.meeting.dto.request.VicolloRequest;
 import com.fourmen.meetingplatform.domain.meeting.service.VicolloClient;
 import com.fourmen.meetingplatform.domain.user.entity.User;
@@ -114,7 +115,7 @@ public class AuthService {
     }
 
     @Transactional
-    public void refreshToken(HttpServletRequest request, HttpServletResponse response) {
+    public RefreshTokenResponse refreshToken(HttpServletRequest request, HttpServletResponse response) {
         String oldRefreshToken = null;
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
@@ -143,6 +144,7 @@ public class AuthService {
         addTokenToCookie(response, "accessToken", newAccessToken, 60 * 60, true);
         addTokenToCookie(response, "refreshToken", newRefreshToken, 60 * 60 * 24 * 7, true);
         addTokenToCookie(response, "XSRF-TOKEN", newCsrfToken, 60 * 60 * 24 * 7, false);
+        return new RefreshTokenResponse(newCsrfToken);
     }
 
     @Transactional

@@ -85,7 +85,8 @@ public class SecurityConfig {
 
         configuration.setAllowedOriginPatterns(Arrays.asList(
                 "https://kr1-api-object-storage.nhncloudservice.com",
-                "http://localhost:5173"));
+                "http://localhost:5173",
+                "https://sign.smhrd.com"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

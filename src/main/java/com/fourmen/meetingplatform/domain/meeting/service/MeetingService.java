@@ -158,9 +158,6 @@ public class MeetingService {
 
     @Transactional(readOnly = true)
     public List<MinuteInfoResponse> getMinutesForContract(Long meetingId, User user) {
-        if (user.getRole() != Role.ADMIN && user.getRole() != Role.CONTRACT_ADMIN) {
-            throw new CustomException("회의록을 조회할 권한이 없습니다.", HttpStatus.FORBIDDEN);
-        }
 
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new CustomException("해당 ID의 회의를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
